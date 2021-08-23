@@ -1,0 +1,35 @@
+{
+  "name": "backend-wellknown",
+  "version": "0.0.0",
+  "description": "A small backend that serves up key configuration",
+  "author": {
+    "name": "UMCCR",
+    "url": "https://umccr.org/",
+    "organization": true
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "npm run build && cross-env NODE_ENV=production node -r dotenv/config build/bootstrap-local.js",
+    "dev": " cross-env NODE_ENV=development nodemon",
+    "build": "tsc --build",
+    "watch": "tsc --build --watch",
+    "test": "jest --forceExit --detectOpenHandles"
+  },
+  "dependencies": {
+    "base64url": "^3.0.1",
+    "dotenv": "^10.0.0",
+    "express": "^5.0.0-alpha.8",
+    "lambda-request-handler": "^0.5.1-alpha1",
+    "lodash": "^4.17.21",
+    "node-forge": "^0.10.0"
+  },
+  "devDependencies": {
+    "@types/node-forge": "^0.10.3",
+    "cross-env": "^7.0.3",
+    "nodemon": "^2.0.7",
+    "prettier": "^2.2.1",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.3.5"
+  }
+}
