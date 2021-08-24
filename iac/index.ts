@@ -1,4 +1,4 @@
-import { LoadBalancedLambdaWebSite } from "./constructs/load-balanced-lambda-web-site";
+import { DidactWebSite } from "./constructs/didact-web-site";
 import { App, CfnParameter, Stack, StackProps } from "aws-cdk-lib";
 
 class DidactStack extends Stack {
@@ -109,22 +109,42 @@ class DidactStack extends Stack {
     };
 
     //
-    // Google
+    // OIDC
     //
 
-    /*const googleTagMeasurementIdParam = new CfnParameter(
+    const oidcLoginHostParam = new CfnParameter(
       this,
-      "GoogleTagMeasurementId",
+      "OidcLoginHost",
       {
         type: "String",
-        description: "Measurement id tag for Google Analytics",
+        description: "Host URL for OIDC login",
       }
     );
 
-    const googleParameterGroup = {
-      Label: { default: "Google" },
-      Parameters: [googleTagMeasurementIdParam.logicalId],
-    }; */
+    const oidcLoginClientIdParam = new CfnParameter(
+      this,
+      "OidcLoginClientId",
+      {
+        type: "String",
+        description: "Client id for OIDC login",
+      }
+    );
+
+    const oidcLoginClientSecretParam = new CfnParameter(
+      this,
+      "OidcLoginClientSecret",
+      {
+        type: "String",
+        description: "Client secret for OIDC login (or leave empty)",
+      }
+    );
+
+    const oidcParameterGroup = {
+      Label: { default: "OIDC" },
+      Parameters: [oidcLoginHostParam.logicalId,
+      oidcLoginClientIdParam.logicalId,
+      oidcLoginClientSecretParam.logicalId],
+    };
 
     // we need to construct a CFN metadata section that has interface->parameter groups
     // this is not supported natively by CDK, so hack it in a bit
@@ -135,13 +155,13 @@ class DidactStack extends Stack {
         siteParameterGroup,
         networkParameterGroup,
         albParameterGroup,
-        // googleParameterGroup,
+        oidcParameterGroup,
       ],
     };
     this.templateOptions.metadata = meta;
     this.templateOptions.description = `${name} build #${build}`;
 
-    new LoadBalancedLambdaWebSite(this, "Web", {
+    new DidactWebSite(this, "Web", {
       semanticVersionParam,
       deployedEnvironmentParam,
       lambdaRepoNameParam,
@@ -152,7 +172,9 @@ class DidactStack extends Stack {
       albNameHostParam: albNameHostParam,
       albNameDomainParam: albNameDomainParam,
       albNameZoneIdParam: albNameZoneIdParam,
-      // googleTagMeasurementIdParam,
+      oidcLoginHostParam,
+      oidcLoginClientIdParam,
+      oidcLoginClientSecretParam,
       build: build,
     });
   }

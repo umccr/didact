@@ -4,5 +4,12 @@
  * We use this as a central point for the definition of these names and attempt to add a
  * bit of "safety" to their use.
  */
-export type AppEnvName = 'TABLE_ARN' | 'TABLE_NAME' | 'SEMANTIC_VERSION' | 'BUILD_VERSION' | 'NODE_ENV';
-
+export type AppEnvName =
+  | "TABLE_ARN"
+  | "TABLE_NAME"
+  | "LOGIN_HOST"
+  | "LOGIN_CLIENT_ID"
+  | "LOGIN_CLIENT_SECRET"
+  | "SEMANTIC_VERSION"
+  | "BUILD_VERSION"
+  | "NODE_ENV";

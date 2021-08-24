@@ -19,6 +19,9 @@
     "lint:fix": "npm run lint -- --fix"
   },
   "dependencies": {
+    "base64url": "^3.0.1",
+    "jose": "^3.15.4",
+    "node-forge": "^0.10.0",
     "@aws-sdk/client-dynamodb": "^3.9.0",
     "@aws-sdk/util-dynamodb": "^3.9.0",
     "axios": "^0.21.1",
@@ -59,6 +62,7 @@
     "@types/lodash": "^4.14.168",
     "@types/morgan": "^1.9.2",
     "@types/node": "^14.14.35",
+    "@types/node-forge": "^0.10.3",
     "@types/supertest": "^2.0.10",
     "@types/winston": "^2.4.4",
     "@typescript-eslint/eslint-plugin": "^4.19.0",

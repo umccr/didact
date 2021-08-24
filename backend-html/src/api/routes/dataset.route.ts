@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { IRoute } from '../../interfaces/routes.interface';
+import { IRoute } from './_routes.interface';
 import { DatasetController } from '../controllers/dataset-controller';
 
 export class DatasetRoute implements IRoute {

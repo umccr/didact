@@ -32,7 +32,9 @@ const h = lambdaRequestHandler.deferred(lambdaOnceOnlyInitialisation);
 const handler = async ev => {
   console.log('REQ', JSON.stringify(ev));
   const res = await h(ev);
-  console.log('RES', JSON.stringify(res));
+  const resText = JSON.stringify(res);
+  // we don't want to log the whole response - especially not the bodies
+  console.log('RES', resText.substr(0, 256));
   return res;
 };
 

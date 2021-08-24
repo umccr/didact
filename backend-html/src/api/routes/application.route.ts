@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { IRoute } from '../../interfaces/routes.interface';
+import { IRoute } from './_routes.interface';
 import { ApplicationController } from '../controllers/application-controller';
 
 export class ApplicationRoute implements IRoute {

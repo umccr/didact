@@ -29,6 +29,9 @@ ECRAPI="$SITE_NAME-api-dev"
 DOMAIN="dev.umccr.org"
 AUSCERT="arn:aws:acm:ap-southeast-2:843407916570:certificate/aa9a1385-7f72-4f1f-98a5-a5da2eff653b"
 DOMAINZONE="Z13ZMZH3CGX773"
+OIDCHOST="https://cilogon.org"
+OIDCCLIENTID="cilogon:/client_id/56667468a214a06b0c6612e2489a48f"
+OIDCCLIENTSECRET="p9L5ahk4UWhgUQtN7el52z2tr8jDmkiXck9DWAIpw4ZnS4YayJZlzPpm31idQ3RP4Nc0915TCjzrKyvm8MQNvA"
 
 # note - the use of --no-lookups - even though a dev stack *could* do lookups - because our
 # eventual CI built stack cannot do lookups - we want to disable it in dev as well
@@ -42,6 +45,9 @@ UMCCR_DEVELOPER=$1 npx cdk deploy \
    --parameters "Subnets=$SUBNETS" \
    --parameters "AZs=$AZS" \
    --parameters "ECRName=$ECRHTML" \
+   --parameters "OidcLoginHost=$OIDCHOST" \
+   --parameters "OidcLoginClientId=$OIDCCLIENTID" \
+   --parameters "OidcLoginClientSecret=$OIDCCLIENTSECRET" \
    --parameters "AlbCertArn=$AUSCERT" \
    --parameters "AlbNameHost=$SITE_NAME-$1" \
    --parameters "AlbNameDomain=$DOMAIN" \

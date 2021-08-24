@@ -1,13 +1,19 @@
-import { Router } from "express";
-import forge from "node-forge";
-import base64url from "base64url";
-import { makeJwks } from "./visa/make-jwks";
-import { keyDefinitions } from "./visa/keys";
-import {makeVisa} from "./visa/make-visa";
+import { Router } from 'express';
+import { makeJwks } from '../../business/services/visa/make-jwks';
+import { keyDefinitions } from '../../business/services/visa/keys';
+import { makeVisaSigned } from '../../business/services/visa/make-visa';
+import { GeneralSign } from 'jose/jws/general/sign';
+import { generateKeyPair } from 'jose/util/generate_key_pair';
+
+/**
+ * NOTE: this is all just a vehicle for experimenting with passports and visas.
+ * So these endpoints are public where in reality they would be secured for only
+ * the use of the broker etc.
+ */
 
 export const wellKnownRouter = Router();
 
-wellKnownRouter.get("/openid-configuration", async (req, res, next) => {
+wellKnownRouter.get('/openid-configuration', async (req, res, next) => {
   const isLocal = req.connection.localAddress === req.connection.remoteAddress;
 
   let issuer: string;
@@ -16,7 +22,7 @@ wellKnownRouter.get("/openid-configuration", async (req, res, next) => {
 
   const config = {
     issuer: issuer,
-    jwks_uri: issuer + "/.well-known/jwks",
+    jwks_uri: issuer + '/.well-known/jwks',
   };
 
   res.status(200).json(config);
@@ -26,20 +32,8 @@ wellKnownRouter.get(`/jwks`, async (req, res, next) => {
   res.status(200).json(makeJwks(keyDefinitions));
 });
 
-/*
-this would not be real but for the moment showing exposing test visas
- */
-wellKnownRouter.get(`/visas`, async (req, res, next) => {
 
-    const results = [];
 
-    // make visas representing the test vector input of the various RFCs (to check signatures are right)
-  results.push(makeVisa(keyDefinitions, "", "rfc8032-7.1-test1"));
-  results.push(makeVisa(keyDefinitions, "r", "rfc8032-7.1-test2"));
-  results.push(makeVisa(keyDefinitions, "c:12345 r.p:#r1", "patto-kid1"))
-
-  res.status(200).json(results);
-});
 
 /*
 RFC 8410                  Safe Curves for X.509              August 2018

@@ -3,22 +3,25 @@ import express, { NextFunction, Request, Response, Router } from 'express';
 import helmet from 'helmet';
 import hpp from 'hpp';
 import morgan from 'morgan';
-import { IRoute } from './interfaces/routes.interface';
+import { IRoute } from './api/routes/_routes.interface';
 import errorMiddleware from './middlewares/error.middleware';
 import path from 'path';
 import * as fs from 'fs';
 import parseUrl from 'parseurl';
-import { URLSearchParams } from 'url';
+import { URL, URLSearchParams } from 'url';
 import * as _ from 'lodash';
 import cryptoRandomString from 'crypto-random-string';
 import got from 'got';
 import { AppEnvName } from '../../shared-src/app-env-name';
+import { wellKnownRouter } from './api/routes/well-known-router';
+import { getMandatoryEnv } from './app-env';
 
 export class App {
   public app: express.Application;
   public env: string;
 
-  private readonly optional_runtime_environment: AppEnvName[] = ['SEMANTIC_VERSION', 'BUILD_VERSION'];
+  private readonly required_runtime_environment: AppEnvName[] = ['LOGIN_HOST', 'LOGIN_CLIENT_ID'];
+  private readonly optional_runtime_environment: AppEnvName[] = ['LOGIN_CLIENT_SECRET', 'SEMANTIC_VERSION', 'BUILD_VERSION'];
 
   // a absolute path to where static files are to be served from
   public staticFilesPath: string;
@@ -26,7 +29,9 @@ export class App {
   // the absolute path for where the index.html template is
   public indexHtmlPath: string;
 
-  private nonce: string;
+  // a nonce we create as a one-off and pass into index pages we serve (given the nature of lambdas
+  // this makes it effectively a short lived nonce)
+  private readonly nonce: string;
 
   constructor(routes: IRoute[]) {
     this.app = express();
@@ -106,14 +111,6 @@ export class App {
     return this.app;
   }
 
-  public async ensureDatabases() {
-    // await personTableInstance.createIfNotExists();
-    //await personTableInstance.addOrUpdatePerson({
-    //  id: 'foo',
-    //  name: 'Fooy',
-    //});
-  }
-
   /**
    * Builds an environment dictionary that is whitelisted to known safe values using
    * whatever logic we want. This can fetch values from any source we want
@@ -128,18 +125,19 @@ export class App {
     const result = {
       // we make a nonce for insertion into inline scripts and automatically allow the nonce in our CSP
       nonce: this.nonce,
-      // we make the definition of the backend-html environment available to the front end too
+      // we make the definition of the backend environment available to the front end too
       env: this.env,
     };
 
-    const addEnv = (key: string, required: boolean) => {
+    const addEnv = (key: AppEnvName, required: boolean) => {
       const val = process.env[key];
 
-      if (required && !val) throw new Error(`Our environment for index.html templating requires an env variable ${key}`);
+      if (required && !val) throw new Error(`Our environment for index.html templating requires a variable named ${key}`);
 
       if (val) result[key.toLowerCase()] = val;
     };
 
+    for (const k of this.required_runtime_environment) addEnv(k, true);
     for (const k of this.optional_runtime_environment) addEnv(k, false);
 
     return result;
@@ -168,6 +166,8 @@ export class App {
     addAttribute('data-semantic-version', safe_environment.semantic_version || 'undefined');
     addAttribute('data-build-version', safe_environment.build_version || 'unknown');
     addAttribute('data-deployed-environment', safe_environment.env);
+    addAttribute('data-login-host', safe_environment.login_host);
+    addAttribute('data-login-client-id', safe_environment.login_client_id);
 
     return dataAttributes;
   }
@@ -175,7 +175,7 @@ export class App {
   /**
    * Serves up the frontends index.html but does so with insertion of values known to the
    * server - that can then relay through to the React frontend. This is an exceedingly useful
-   * pattern that helps us control the configuration of React - but from the backend-html deployment.
+   * pattern that helps us control the configuration of React - but from the backend deployment.
    *
    * @param req
    * @param res
@@ -184,7 +184,7 @@ export class App {
   private async serveCustomIndexHtml(req: Request, res: Response) {
     // the base index.html template (note: this index.html will *already* have been through a level of
     // templating during the create-react-app build phase - any further templating we are about to do
-    // is to insert values that are from the deployment or browser context)
+    // is to insert values that are from the *deployment* or *browser* context)
     let indexText = await fs.promises.readFile(path.resolve(this.staticFilesPath, 'index.html'), 'utf8');
 
     // env data we want to use for index.html substitutions
@@ -256,7 +256,7 @@ export class App {
       break;
     }
 
-    if (!hasSent) this.serveCustomIndexHtml(req, res);
+    if (!hasSent) await this.serveCustomIndexHtml(req, res);
   }
 
   private initializeMiddlewares() {
@@ -311,26 +311,70 @@ export class App {
   }
 
   private initializeRoutes(routes: IRoute[]) {
-    const oauthRouter = Router();
-    oauthRouter.post(`/exchange`, async (req, res, next) => {
-      // because we (the backend) have the secrets - we are the only party that can do an code<->token exchange
-      // (this is very much NOT normal oauth but in the absence of PKCE - this hybrid approach allows us to
-      // continue until PKCE is supported by CIlogon)
-      const tokenResponse = await got
-        .post('https://cilogon.org/oauth2/token', {
-          form: {
-            grant_type: 'authorization_code',
-            client_secret: '6P46gXAVcurOZ1jXQ-TO4KgqZ4EZBEJDtp2HaunCXGNyODeVnnzpVPPrvp1qyDbvs4kFmbk9qXV5Gn9NSpQhRQ',
-            client_id: 'cilogon:/client_id/2e91851f6427452bea1eec8d0a16991c',
-            redirect_uri: 'http://localhost:3000/login/callback',
-            code: req.body.code,
-          },
-        })
-        .json();
+    // we have a temporary hacky workaround whilst waiting for PKCE support from cilogon
+    const loginHost = getMandatoryEnv('LOGIN_HOST');
 
-      res.status(200).json(tokenResponse);
-    });
-    this.app.use('/login', oauthRouter);
+    if (loginHost.includes('cilogon')) {
+      const oauthRouter = Router();
+
+      const loginClientId = getMandatoryEnv('LOGIN_CLIENT_ID');
+      const loginClientSecret = getMandatoryEnv('LOGIN_CLIENT_SECRET');
+
+      oauthRouter.post(`/exchange`, async (req, res, next) => {
+        console.log('Code exchange');
+        console.log(req.body);
+        const referrerUrl = new URL(req.get('referer'));
+        referrerUrl.search = '';
+        console.log(referrerUrl.href);
+        // because we (the backend) have the secrets - we are the only party that can do an code<->token exchange
+        // (this is very much NOT NORMAL oauth but in the absence of PKCE - this hybrid approach allows us to
+        // continue until PKCE is supported by CIlogon)
+        try {
+          console.log(`Doing exchange POST to endpoint ${loginHost} with id ${loginClientId} and secret ${loginClientSecret}`);
+          const tokenResponse = await got
+            .post(`${loginHost}/oauth2/token`, {
+              form: {
+                grant_type: 'authorization_code',
+                client_secret: loginClientSecret,
+                client_id: loginClientId,
+                // note: this redirect is not actually used but must be specified and match one in the config
+                redirect_uri: referrerUrl.href,
+                // redirect_uri: 'http://localhost:3000/login/callback',
+                code: req.body.code,
+              },
+            })
+            .json();
+          res.status(200).json(tokenResponse);
+        } catch (error) {
+          console.log('Code exchange failed');
+
+          if (error.response) {
+            /*
+             * The request was made and the server responded with a
+             * status code that falls out of the range of 2xx
+             */
+            console.log(error.response.data);
+            console.log(error.response.status);
+            console.log(error.response.headers);
+          } else if (error.request) {
+            /*
+             * The request was made but no response was received, `error.request`
+             * is an instance of XMLHttpRequest in the browser and an instance
+             * of http.ClientRequest in Node.js
+             */
+            console.log(error.request);
+          } else {
+            // Something happened in setting up the request and triggered an Error
+            console.log('Error', error.message);
+          }
+          console.log(error);
+          res.status(500).json({ message: 'Code exchange failed' });
+        }
+      });
+      this.app.use('/login', oauthRouter);
+    }
+
+    this.app.use('/.well-known', wellKnownRouter);
 
     routes.forEach(route => {
       this.app.use('/api', route.router);

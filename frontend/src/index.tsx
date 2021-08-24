@@ -36,6 +36,8 @@ if (root != null) {
   const bv = root.dataset.buildVersion || "-1";
   const de = (root.dataset.deployedEnvironment ||
     "development") as DeployedEnvironments;
+  const lh = root.dataset.loginHost || "not a real openid host";
+  const lci = root.dataset.loginClientId || "not a real client id";
 
   const queryClient = new QueryClient();
 
@@ -46,6 +48,8 @@ if (root != null) {
         semanticVersion={sv}
         buildVersion={bv}
         deployedEnvironment={de}
+        loginHost={lh}
+        loginClientId={lci}
       >
         {/* the query provider comes from react-query and provides standardised remote query semantics */}
         <QueryClientProvider client={queryClient}>

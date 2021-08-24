@@ -1,7 +1,7 @@
 import React from "react";
 import { Route, Switch, useHistory, useLocation } from "react-router-dom";
 import { LoginCallback, SecureRoute, Security } from "@okta/okta-react";
-import { OktaAuth, toRelativeUrl } from "@okta/okta-auth-js";
+import { OktaAuth, OktaAuthOptions, toRelativeUrl } from "@okta/okta-auth-js";
 import { DatasetsPage } from "./pages/datasets";
 import { LandingPage } from "./pages/landing";
 import { LoginPage } from "./pages/login";
@@ -10,19 +10,9 @@ import { ApplicationNewPage } from "./pages/application-new";
 import { ApplicationTimelinePage } from "./pages/application-timeline";
 import { UserModeProvider } from "./providers/user-mode-provider";
 import { UserLoggedInProvider } from "./providers/user-logged-in-provider";
-import {ApplicationEditPage} from "./pages/application-edit";
-
-const oktaOktaAuth = new OktaAuth({
-  // move these params to cloud formation at some point
-  issuer: "https://dev-3176584.okta.com",
-  clientId: "0oa1hmtx3qkHXmska5d7",
-  scopes: ["openid", "email", "profile"],
-  redirectUri: window.location.origin + "/login/callback",
-  pkce: true,
-  devMode: true,
-});
-
-const oktaAuth = oktaOktaAuth;
+import { ApplicationEditPage } from "./pages/application-edit";
+import { useEnvRelay } from "./providers/env-relay-provider";
+import { NoPKCELoginCallback } from "./components/no-pkce-login-callback";
 
 function NoMatch() {
   let location = useLocation();
@@ -43,6 +33,46 @@ function NoMatch() {
  */
 export const App: React.FC = () => {
   const history = useHistory();
+  const { loginHost, loginClientId } = useEnvRelay();
+
+  // we prefer to use the okta login callback - but due to lack of PKCE
+  // we have a custom one for cilogon
+  let loginCallbackComponent = LoginCallback;
+
+  const oktaAuthConfig: OktaAuthOptions = {
+    issuer: loginHost,
+    clientId: loginClientId,
+    scopes: ["openid", "email", "profile"],
+    redirectUri: window.location.origin + "/login/callback",
+    devMode: true,
+  };
+
+  if (loginHost.includes("cilogon")) {
+    oktaAuthConfig.authorizeUrl = `${loginHost}/authorize`;
+    oktaAuthConfig.userinfoUrl = `${loginHost}/oauth2/userinfo`;
+    oktaAuthConfig.tokenUrl = `${loginHost}/oauth2/token`;
+    oktaAuthConfig.scopes = [
+      "openid",
+      "email",
+      "profile",
+      "org.cilogon.userinfo",
+    ];
+    oktaAuthConfig.responseType = ["code"];
+    oktaAuthConfig.pkce = false;
+    // the okta servers have a CORS setup that allows these two headers.. but because
+    // CILogon (understandably) doesn't, we need to remove them from the outgoing
+    // requests
+    oktaAuthConfig.headers = {
+      "Content-Type": null,
+      "X-Okta-User-Agent-Extended": null,
+    };
+    loginCallbackComponent = NoPKCELoginCallback;
+  } else {
+    oktaAuthConfig.pkce = true;
+  }
+
+  const oktaAuth = new OktaAuth(oktaAuthConfig);
+
   const onAuthRequired = () => {
     history.push("/login");
   };
@@ -74,7 +104,7 @@ export const App: React.FC = () => {
             <Route
               path="/login/callback"
               exact={true}
-              component={LoginCallback}
+              component={loginCallbackComponent}
             />
             {/* everything under the /p hierarchy will require being authenticated to view */}
             {/* note also that in order to truly be secure, ALL apis that are hit by these pages

@@ -35,7 +35,7 @@ interface LoginCallbackProps {
  * @param loadingElement
  * @constructor
  */
-const NoPKCELoginCallback: React.FC<LoginCallbackProps> = ({ errorComponent, loadingElement = null}) => {
+export const NoPKCELoginCallback: React.FC<LoginCallbackProps> = ({ errorComponent, loadingElement = null}) => {
     const { oktaAuth, authState } = useOktaAuth();
     const [callbackError, setCallbackError] = React.useState(null);
 
@@ -145,5 +145,3 @@ const NoPKCELoginCallback: React.FC<LoginCallbackProps> = ({ errorComponent, loa
 
     return loadingElement;
 };
-
-export default NoPKCELoginCallback;
