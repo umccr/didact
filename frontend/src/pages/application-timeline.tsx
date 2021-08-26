@@ -3,8 +3,46 @@ import { LayoutStandardPage } from "../layouts/layout-standard-page";
 import { useParams } from "react-router-dom";
 import { useQuery } from "react-query";
 import axios from "axios";
-import { ApplicationApiModel } from "../../../shared-src/api-models/application";
+import { ApplicationApiModel, ApplicationEventApiModel } from "../../../shared-src/api-models/application";
 import classnames from "classnames";
+
+type TimelineEntryProps = {
+  event: ApplicationEventApiModel;
+}
+
+const TimelineEntry: React.FC<TimelineEntryProps> = ({ event }) => {
+  const overallDivClasses = classnames(
+    ["mb-8", "flex", "justify-between", "items-center", "w-full"],
+    {
+      "right-timeline": event.as === "committee",
+      "left-timeline": event.as !== "committee",
+      "flex-row-reverse": event.as !== "committee",
+    }
+  );
+  const innerDivClasses = classnames(
+    ["order-1", "w-5/12", "px-1", "py-4"],
+    {
+      "text-right": event.as !== "committee",
+      "text-left": event.as === "committee",
+    }
+  );
+
+  return (
+    <div className={overallDivClasses}>
+      <div className="order-1 w-5/12" />
+      <div className={innerDivClasses}>
+        <p className="mb-3 text-base text-gray-500">{event.when}</p>
+        <h4 className="mb-3 font-bold text-lg md:text-2xl">
+          {event.action} by {event.byName}
+        </h4>
+        <p className="text-sm md:text-base leading-snug text-gray-500 text-opacity-100">
+          {event.detail}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 
 export const ApplicationTimelinePage: React.FC = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
@@ -54,40 +92,7 @@ export const ApplicationTimelinePage: React.FC = () => {
               }}
             />
             {/* timeline entries */}
-            {data.events.map((ev, index) => {
-              {
-                const overallDivClasses = classnames(
-                  ["mb-8", "flex", "justify-between", "items-center", "w-full"],
-                  {
-                    "right-timeline": ev.as === "committee",
-                    "left-timeline": ev.as !== "committee",
-                    "flex-row-reverse": ev.as !== "committee",
-                  }
-                );
-                const innerDivClasses = classnames(
-                  ["order-1", "w-5/12", "px-1", "py-4"],
-                  {
-                    "text-right": ev.as !== "committee",
-                    "text-left": ev.as === "committee",
-                  }
-                );
-
-                return (
-                  <div className={overallDivClasses}>
-                    <div className="order-1 w-5/12" />
-                    <div className={innerDivClasses}>
-                      <p className="mb-3 text-base text-gray-500">{ev.when}</p>
-                      <h4 className="mb-3 font-bold text-lg md:text-2xl">
-                        {ev.action} by {ev.byName}
-                      </h4>
-                      <p className="text-sm md:text-base leading-snug text-gray-500 text-opacity-100">
-                        {ev.detail}
-                      </p>
-                    </div>
-                  </div>
-                );
-              }
-            })}
+            {data.events.map((ev, index) => <TimelineEntry event={ev}/>)}
           </div>
         </div>
       )}

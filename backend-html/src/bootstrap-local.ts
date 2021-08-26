@@ -1,4 +1,4 @@
-import app from './app-concrete';
+import { app } from './app-concrete';
 import { setupTestData } from './testing/setup-test-data';
 
 // the development node bootstrap entrypoint

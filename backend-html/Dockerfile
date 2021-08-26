@@ -14,6 +14,7 @@ RUN printf "#!/bin/bash\n$@\n" > /docker-entrypoint.sh
 
 # NOTE: the default WORKDIR for the lambda images is /var/task which we inherit
 # So all of these files are going into /var/task
+COPY src/favicon.ico ./
 
 # Try to be reasonably strict here about only install the needed node_modules for runtime ('ci --production', not '--dev')
 COPY package*.json ./

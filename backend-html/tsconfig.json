@@ -17,6 +17,6 @@
     "esModuleInterop": true
   },
   "references": [{ "path": "../shared-src" }],
-  "include": ["./src/**/*", ".env"],
+  "include": ["./src/**/*"],
   "exclude": ["node_modules"]
 }

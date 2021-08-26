@@ -29,8 +29,8 @@ class ApplicationService {
       principalInvestigatorId: principalInvestigatorId,
       datasetId: datasetId,
       projectTitle: projectTitle,
-      researchUseStatement: 'default rus',
-      nonTechnicalStatement: 'default non tech',
+      researchUseStatement: 'default RUS statement',
+      nonTechnicalStatement: 'default non tech statement',
       state: 'started',
     });
 
@@ -131,25 +131,135 @@ class ApplicationService {
   }
 
   /**
+   * Approve an application.
+   * NEEDS SECURITY CHECKS STILL.
+   *
+   * @param applicationId the application id to approve
+   * @param approverUserId the user doing the approving
+   * @return the full application model including new status and event
+   */
+  public async approveApplication(applicationId: string, approverUserId: string): Promise<ApplicationApiModel> {
+    const { ApplicationDbModel, ApplicationEventDbModel } = getTypes(this.table);
+
+    const transaction = {};
+    await ApplicationDbModel.update({ id: applicationId, state: 'approved' }, { transaction });
+    await ApplicationEventDbModel.create(
+      {
+        as: 'committee',
+        byId: approverUserId,
+        applicationId: applicationId,
+        action: 'approve',
+        detail: '',
+      },
+      { transaction },
+    );
+    await this.table.transact('write', transaction);
+
+    return this.asApplication(applicationId);
+  }
+
+  /**
+   * Unapprove an application.
+   * NEEDS SECURITY CHECKS STILL.
+   *
+   * @param applicationId the application id to approve
+   * @param unapproverUserId the user doing the approving
+   * @return the full application model including new status and event
+   */
+  public async unapproveApplication(applicationId: string, unapproverUserId: string): Promise<ApplicationApiModel> {
+    const { ApplicationDbModel, ApplicationEventDbModel } = getTypes(this.table);
+
+    const transaction = {};
+    await ApplicationDbModel.update({ id: applicationId, state: 'submitted' }, { transaction });
+    await ApplicationEventDbModel.create(
+      {
+        as: 'committee',
+        byId: unapproverUserId,
+        applicationId: applicationId,
+        action: 'unapprove',
+        detail: '',
+      },
+      { transaction },
+    );
+    await this.table.transact('write', transaction);
+
+    return this.asApplication(applicationId);
+  }
+
+  /**
+   * Submit an application.
+   * NEEDS SECURITY CHECKS STILL.
+   *
+   * @param applicationId the application id to submit
+   * @param submitterUserId the user doing the submitting
+   * @return the full application model including new status and event
+   */
+  public async submitApplication(applicationId: string, submitterUserId: string): Promise<ApplicationApiModel> {
+    const { ApplicationDbModel, ApplicationEventDbModel } = getTypes(this.table);
+
+    const transaction = {};
+    await ApplicationDbModel.update({ id: applicationId, state: 'submitted' }, { transaction });
+    await ApplicationEventDbModel.create(
+      {
+        as: 'committee',
+        byId: submitterUserId,
+        applicationId: applicationId,
+        action: 'submit',
+        detail: '',
+      },
+      { transaction },
+    );
+    await this.table.transact('write', transaction);
+
+    return this.asApplication(applicationId);
+  }
+
+  /**
+   * Return a list of all dataset ids that this applicant is approved to access.
+   *
+   * @param subjectId
+   */
+  public async findApprovedDatasetsInvolvedAsApplicant(subjectId: string): Promise<string[]> {
+    const { ApplicationDbModel } = getTypes(this.table);
+
+    // find all applications this subject is involved with
+    // we could probably approach this a variety of ways - starting with approved applications -> check for user
+    // but this way has a reasonably self limiting bounds.. I mean how many applications _can_ a person
+    // be involved with - whereas the number of approved applications could theoretically grow very large
+    // in a heavily used system
+    // for the moment I imagine it is much of a muchness
+    const applications = await this.findInvolvedAsApplicant(subjectId);
+    const results = new Set<string>([]);
+
+    for (const appId of applications) {
+      const appData = await ApplicationDbModel.get({ id: appId });
+
+      if (appData.state == 'approved') results.add(appData.datasetId);
+    }
+
+    return Array.from(results.values());
+  }
+
+  /**
    * Finds any application that are person is the PI etc on OR in which this person has made
    * a comment as a researcher.
    * NEEDS TIDYING.. FIX THE PAGING PATTERN
-   * @param id
+   * @param subjectId
    * @private
    */
-  private async findInvolvedAsApplicant(id: string): Promise<string[]> {
+  public async findInvolvedAsApplicant(subjectId: string): Promise<string[]> {
     const { ApplicationDbModel, ApplicationEventDbModel } = getTypes(this.table);
 
     const results = new Set<string>([]);
 
-    for (const item of await ApplicationEventDbModel.find({ byId: id, as: 'applicant' }, { index: 'gs1', fields: ['applicationId'] }))
+    for (const item of await ApplicationEventDbModel.find({ byId: subjectId, as: 'applicant' }, { index: 'gs1', fields: ['applicationId'] }))
       results.add(item.applicationId);
 
-    for (const item of await ApplicationDbModel.find({ applicantId: id }, { index: 'gs1' })) {
+    for (const item of await ApplicationDbModel.find({ applicantId: subjectId }, { index: 'gs1' })) {
       results.add(item.id);
     }
 
-    for (const item of await ApplicationDbModel.find({ principalInvestigatorId: id }, { index: 'gs2' })) results.add(item.id);
+    for (const item of await ApplicationDbModel.find({ principalInvestigatorId: subjectId }, { index: 'gs2' })) results.add(item.id);
 
     return Array.from(results.values());
   }
@@ -161,7 +271,7 @@ class ApplicationService {
    * @param personId
    * @private
    */
-  private async findInvolvedAsCommittee(personId: string): Promise<string[]> {
+  public async findInvolvedAsCommittee(personId: string): Promise<string[]> {
     const { CommitteeMemberDbModel, ApplicationDbModel, DatasetDbModel } = getTypes(this.table);
 
     // build a set of committees this person is in

@@ -3,8 +3,9 @@ import express, { NextFunction, Request, Response, Router } from 'express';
 import helmet from 'helmet';
 import hpp from 'hpp';
 import morgan from 'morgan';
+import favicon from 'serve-favicon';
 import { IRoute } from './api/routes/_routes.interface';
-import errorMiddleware from './middlewares/error.middleware';
+import { errorMiddleware } from './middlewares/error.middleware';
 import path from 'path';
 import * as fs from 'fs';
 import parseUrl from 'parseurl';
@@ -260,15 +261,17 @@ export class App {
   }
 
   private initializeMiddlewares() {
+    // we want to serve this first so it avoid any logging - as it is irrelevant to us
+    this.app.use(favicon(path.join(__dirname, 'favicon.ico')));
+
+    // setup logging levels based on environment
     if (this.env === 'production') {
       this.app.use(morgan('combined'));
-      // this.app.use(cors({ origin: 'your.domain.com', credentials: true }));
     } else if (this.env === 'development') {
-      this.app.use(morgan('dev'));
-      //      this.app.use(morgan('dev', { stream }));
-      // this.app.use(cors({ origin: true, credentials: true }));
+      this.app.use(morgan('short'));
     }
 
+    /*
     let defaultSecurityPolicyDirectives = helmet.contentSecurityPolicy.getDefaultDirectives();
     defaultSecurityPolicyDirectives['connect-src'] = ["'self'", 'https://*.google-analytics.com'];
     defaultSecurityPolicyDirectives['img-src'] = ["'self'", 'data:', 'https://*.googleapis.com', 'https://*.gstatic.com'];
@@ -280,22 +283,6 @@ export class App {
       'https://*.gstatic.com',
       'https://*.googletagmanager.com',
     ];
-
-    // for a brief time at the start of the project - we cannot even deploy to https.. so this directive is causing failures
-    // remove this 'remover' as soon as possible
-    if (this.env === 'development') {
-      const omitSingle = (key, { [key]: _, ...obj }) => obj;
-      defaultSecurityPolicyDirectives = omitSingle('upgrade-insecure-requests', defaultSecurityPolicyDirectives);
-      defaultSecurityPolicyDirectives = omitSingle('script-src-attr', defaultSecurityPolicyDirectives);
-
-      (defaultSecurityPolicyDirectives['script-src'] as [string]).push("'unsafe-eval'");
-      (defaultSecurityPolicyDirectives['script-src'] as [string]).push("'unsafe-inline'");
-    }
-
-    // we will be wrapped by a CDN network so we don't want our own etags messing with it
-    // we also chose NOT to do compression from our origin and the CDN will handle   this.app.use(compression());
-    this.app.set('etag', false);
-
     // this.app.use(
     //   helmet({
     //     contentSecurityPolicy: {
@@ -303,6 +290,8 @@ export class App {
     //     },
     //   }),
     // );
+     */
+
     this.app.use(helmet.hidePoweredBy());
     this.app.use(hpp());
     this.app.use(express.json());

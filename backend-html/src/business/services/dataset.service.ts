@@ -2,16 +2,15 @@
  * The dataset service provides business layer functionality around
  * datasets.
  */
-import { getMandatoryEnv } from '../../app-env';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import Dynamo from 'dynamodb-onetable/Dynamo';
-import { AnyEntity, Paged, Table } from 'dynamodb-onetable';
+import { Paged, Table } from 'dynamodb-onetable';
 import { getTable } from '../db/didact-table-utils';
 import { DatasetDbType, getTypes } from '../db/didact-table-types';
 import { DatasetApiModel } from '../../../../shared-src/api-models/dataset';
 
 class DatasetService {
-  private table: Table;
+  private readonly table: Table;
 
   constructor() {
     const client = new Dynamo({
@@ -39,7 +38,9 @@ class DatasetService {
           id: item.id,
           name: item.name,
           description: item.description,
-          custodian: item.custodian,
+          committeeId: item.committeeId,
+          committeeDisplayName: item.committeeId,
+          dataUses: item.dataUses,
         });
       }
 

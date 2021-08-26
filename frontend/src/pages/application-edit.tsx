@@ -4,15 +4,24 @@ import { Concept, ConceptChooser } from "../components/concept-chooser";
 import _ from "lodash";
 import classnames from "classnames";
 import { useParams } from "react-router-dom";
-import { useQuery } from "react-query";
+import { useQuery, useQueryClient } from "react-query";
 import axios from "axios";
 import { ApplicationApiModel } from "../../../shared-src/api-models/application";
+import { UserLoggedInContext } from "../providers/user-logged-in-provider";
+
+export const APPLICATION_EDIT_QUERY_NAME = "application-edit";
 
 export const ApplicationEditPage: React.FC = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
 
-  const { isLoading, isError, data, error } = useQuery(
-    ["application-edit", applicationId],
+  const queryClient = useQueryClient();
+
+  const { userList, user, getUserBearer, getUserId } = React.useContext(
+    UserLoggedInContext
+  );
+  
+  const { isLoading, isError, data, error } = useQuery<ApplicationApiModel>(
+    [APPLICATION_EDIT_QUERY_NAME, applicationId],
     async ({ queryKey }) => {
       const data = await axios
         .get<ApplicationApiModel>(`/api/application/${queryKey[1]}`)
@@ -21,6 +30,42 @@ export const ApplicationEditPage: React.FC = () => {
       return data;
     }
   );
+  
+  const approveClick = async () => {
+    const apiResponse = await axios
+      .post<{ }>(`/api/application/${applicationId}/approve`, {}, {
+        headers: {
+          Authorization: getUserBearer(user),
+        },
+      })
+      .then((response) => response.data);
+
+    await queryClient.invalidateQueries(APPLICATION_EDIT_QUERY_NAME)
+  }
+
+  const unapproveClick = async () => {
+    const apiResponse = await axios
+      .post<{ }>(`/api/application/${applicationId}/unapprove`, {}, {
+        headers: {
+          Authorization: getUserBearer(user),
+        },
+      })
+      .then((response) => response.data);
+
+    await queryClient.invalidateQueries(APPLICATION_EDIT_QUERY_NAME)
+  }
+
+  const submitClick = async () => {
+    const apiResponse = await axios
+      .post<{ }>(`/api/application/${applicationId}/submit`, {}, {
+        headers: {
+          Authorization: getUserBearer(user),
+        },
+      })
+      .then((response) => response.data);
+
+    await queryClient.invalidateQueries(APPLICATION_EDIT_QUERY_NAME)
+  }
 
   const [snomedSelected, setSnomedSelected] = useState(
     {} as { [id: string]: Concept }
@@ -72,6 +117,11 @@ export const ApplicationEditPage: React.FC = () => {
     setHgncSelected(newSelected);
   };
 
+  const approveDisabled = data && ['started', 'approved'].includes(data.state);
+  const unapproveDisabled = data && ['submitted', 'started'].includes(data.state);
+  const submitDisabled = data && ['submitted', 'approved', 'rejected'].includes(data.state);
+  const rusDisabled = data && ['submitted', 'approved', 'rejected'].includes(data.state);
+
   return (
     // "https://genomics.ontoserver.csiro.au", //"http://snomed.info/sct/32506021000036107"
     <LayoutStandardPage
@@ -80,7 +130,9 @@ export const ApplicationEditPage: React.FC = () => {
     >
       {data && (
         <div>
-          <div className="md:grid md:grid-cols-4 md:gap-6">
+          <div className="md:grid md:grid-cols-6 md:gap-6">
+
+            {/* left header column */}
             <div className="md:col-span-1">
               <div className="px-4 sm:px-0">
                 <h3 className="text-lg font-medium leading-6 text-gray-900">
@@ -91,7 +143,77 @@ export const ApplicationEditPage: React.FC = () => {
                 </p>
               </div>
             </div>
-            <div className="mt-5 md:mt-0 md:col-span-3">
+
+            {/* right content column */}
+            <div className="mt-5 md:mt-0 md:col-span-5 md:space-y-6">
+
+              <div className="shadow sm:rounded-md sm:overflow-hidden">
+                <div className="px-4 py-5 bg-white space-y-6 sm:p-6">
+                  {/* application id */}
+                  <div className="grid grid-cols-3 gap-6">
+                    <div className="col-span-3 sm:col-span-2">
+                      <label
+                        className="block text-sm font-medium text-gray-700"
+                      >
+                        Application Id
+                      </label>
+                      <div className="mt-1 flex rounded-md shadow-sm">
+                        {data.id}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* application state */}
+                  <div className="grid grid-cols-3 gap-6">
+                    <div className="col-span-3 sm:col-span-2">
+                      <label
+                        className="block text-sm font-medium text-gray-700"
+                      >
+                        Application State
+                      </label>
+                      <div className="mt-1 flex rounded-md shadow-sm">
+                        {data.state}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-4 py-3 bg-gray-50 text-right sm:px-6">
+                  <div className="space-x-6">
+                    <button
+                      onClick={submitClick}
+                      className={classnames("btn", "btn-blue", {
+                        "opacity-50": submitDisabled,
+                        "cursor-not-allowed": submitDisabled,
+                      })}
+                      disabled={submitDisabled}
+                    >
+                      Submit
+                    </button>
+                    <button
+                      onClick={approveClick}
+                      className={classnames("btn", "btn-blue", {
+                        "opacity-50": approveDisabled,
+                        "cursor-not-allowed": approveDisabled,
+                      })}
+                      disabled={approveDisabled}
+                    >
+                      Approve
+                    </button>
+
+                    <button
+                      onClick={unapproveClick}
+                      className={classnames("btn", "btn-blue", {
+                        "opacity-50": unapproveDisabled,
+                        "cursor-not-allowed": unapproveDisabled,
+                      })}
+                      disabled={unapproveDisabled}
+                    >
+                      Unapprove
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <form action="#" method="POST">
                 <div className="shadow sm:rounded-md sm:overflow-hidden">
                   <div className="px-4 py-5 bg-white space-y-6 sm:p-6">
@@ -121,7 +243,11 @@ export const ApplicationEditPage: React.FC = () => {
                         <textarea
                           id="rus"
                           rows={5}
-                          className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
+                          className={classnames("shadow-sm", "focus:ring-indigo-500", "focus:border-indigo-500", "mt-1", "block", "w-full", "sm:text-sm", "border", "border-gray-300", "rounded-md", {
+                            "opacity-50": rusDisabled
+                          })}
+                          value={data.researchUseStatement}
+                          disabled={rusDisabled}
                         />
                       </div>
                       <p className="mt-2 text-sm text-gray-500 opacity-75">

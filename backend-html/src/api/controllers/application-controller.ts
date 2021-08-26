@@ -1,9 +1,11 @@
 import { NextFunction, Request, Response } from 'express';
-import { datasetServiceInstance } from '../../business/services/dataset.service';
 import { applicationServiceInstance } from '../../business/services/application.service';
-import { PERSON_ANDREW, PERSON_BOB } from '../../testing/setup-test-data';
 import { ApplicationApiModel } from '../../../../shared-src/api-models/application';
 
+/**
+ * A controller for the application, that maps between API activity and calls to the underlying
+ * business service.
+ */
 export class ApplicationController {
   public getApplication = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -32,6 +34,51 @@ export class ApplicationController {
           input.datasetId,
           input.projectTitle,
         );
+
+        res.status(200).json(data);
+      } else res.status(401).json('Bearer token was missing');
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public approveApplication = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // pretend at this point we decode the Bearer auth token
+      if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
+        const user = req.headers.authorization.split(' ')[1];
+        const appId = req.params.applicationId;
+        const data = await applicationServiceInstance.approveApplication(appId, user);
+
+        res.status(200).json(data);
+      } else res.status(401).json('Bearer token was missing');
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public unapproveApplication = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // pretend at this point we decode the Bearer auth token
+      if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
+        const user = req.headers.authorization.split(' ')[1];
+        const appId = req.params.applicationId;
+        const data = await applicationServiceInstance.unapproveApplication(appId, user);
+
+        res.status(200).json(data);
+      } else res.status(401).json('Bearer token was missing');
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public submitApplication = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // pretend at this point we decode the Bearer auth token
+      if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
+        const user = req.headers.authorization.split(' ')[1];
+        const appId = req.params.applicationId;
+        const data = await applicationServiceInstance.submitApplication(appId, user);
 
         res.status(200).json(data);
       } else res.status(401).json('Bearer token was missing');

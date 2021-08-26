@@ -22,6 +22,7 @@ export const DidactTableSchema = {
       description: { type: String },
       // the committee that is assigned to deal with this dataset
       committeeId: { type: String, required: true },
+      dataUses: { type: Array, required: true },
 
       // index dataset.committeeId -> dataset.id
       gs1pk: { type: String, value: 'ds#${committeeId}' },
@@ -59,7 +60,7 @@ export const DidactTableSchema = {
       principalInvestigatorId: { type: String, required: true },
       datasetId: { type: String, required: true },
       projectTitle: { type: String, required: true },
-      state: { type: String, enum: ['started', 'submitted', 'rejected', 'approved'], required: true },
+      state: { type: String, enum: ['started', 'submitted', 'approved', 'rejected'], required: true },
       // fields that can be edited during application process
       researchUseStatement: { type: String, required: false },
       nonTechnicalStatement: { type: String, required: false },
@@ -81,7 +82,7 @@ export const DidactTableSchema = {
       applicationId: { type: String, required: true },
       id: { type: String, uuid: true, validate: Match.ulid },
       when: { type: Date, default: () => new Date() },
-      action: { type: String, enum: ['create', 'edit', 'comment', 'approve', 'soft-reject', 'final-reject'], required: true },
+      action: { type: String, enum: ['create', 'edit', 'comment', 'submit', 'unsubmit', 'approve', 'unapprove'], required: true },
       byId: { type: String, required: true },
       as: { type: String, enum: ['applicant', 'committee'], required: true },
       detail: { type: String, required: true },

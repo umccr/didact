@@ -3,6 +3,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { getTable } from '../business/db/didact-table-utils';
 import { ApplicationEventDbType, getTypes } from '../business/db/didact-table-types';
 import { AnyEntity, Paged, Table } from 'dynamodb-onetable';
+import { DataUseLimitation } from '../../../shared-src/api-models/data-use-limitation';
 
 // whilst the user management is developed
 export const PERSON_BOB = 'https://nagim.dev/p/ertyu-asrqe-34526';
@@ -100,9 +101,56 @@ export async function setupTestData(canDestroyExistingData: boolean) {
     });
   }
 
-  await DatasetDbModel.create({ id: 'urn:fdc:australiangenomics.org.au:2018:study/1', name: 'Mitochondrial Flagship', committeeId: c2.id });
-  await DatasetDbModel.create({ id: 'urn:fdc:australiangenomics.org.au:2018:study/2', name: 'Heart Flagship', committeeId: c2.id });
-  await DatasetDbModel.create({ id: 'urn:fdc:australiangenomics.org.au:2018:study/3', name: 'Cancer Flagship', committeeId: c1.id });
+  {
+    const ds1dataUse: DataUseLimitation = {
+      code: { id: 'DUO:0000042', label: 'GRU' },
+      modifiers: [{ code: { id: 'DUO:0000025', label: 'TS' }, start: '2021-03-01' }],
+    };
+
+    await DatasetDbModel.create({
+      id: 'urn:fdc:australiangenomics.org.au:2018:study/1',
+      name: 'Mitochondrial Flagship',
+      committeeId: c2.id,
+      description: '45 participants with mitochondrial disorders',
+      dataUses: [ds1dataUse],
+    });
+  }
+
+  {
+    const ds2dataUseParkville: DataUseLimitation = {
+      code: { id: 'DUO:0000006', label: 'HMB' },
+      modifiers: [{ code: { id: 'DUO:0000028', label: 'IS' }, institutes: [{ id: 'https://ror.org/01b6kha49', label: 'WEHI' }] }],
+    };
+
+    const ds2dataUse: DataUseLimitation = {
+      code: { id: 'DUO:0000007', label: 'DS' },
+      disease: { id: 'SNOMED:49601007', label: 'Cardiovascular disease' },
+      modifiers: [{ code: { id: 'DUO:0000025', label: 'TS' }, start: '2022-01-01' }],
+    };
+
+    await DatasetDbModel.create({
+      id: 'urn:fdc:australiangenomics.org.au:2018:study/2',
+      name: 'Heart Flagship',
+      committeeId: c2.id,
+      description: '45 participants with various types of heart disease',
+      dataUses: [ds2dataUseParkville, ds2dataUse],
+    });
+  }
+
+  {
+    const ds3dataUse: DataUseLimitation = {
+      code: { id: 'DUO:0000004', label: 'NRES' },
+      modifiers: [],
+    };
+
+    await DatasetDbModel.create({
+      id: 'urn:fdc:australiangenomics.org.au:2018:study/3',
+      name: 'Cancer Flagship',
+      committeeId: c1.id,
+      description: 'A comprehensive cohort of all types of cancer from 1 million participants',
+      dataUses: [ds3dataUse],
+    });
+  }
 
   // andrew is applying for access to the cancer flagship data, with bob as PI
   // alice is on the corresponding committee
