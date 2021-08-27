@@ -20,6 +20,27 @@ class DatasetService {
     this.table = getTable(client);
   }
 
+  public itemToDataset(item: any): DatasetApiModel {
+    return {
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      committeeId: item.committeeId,
+      committeeDisplayName: item.committeeId,
+      dataUses: item.dataUses,
+    };
+  }
+
+  public async asDataset(dsId: string): Promise<DatasetApiModel> {
+    const { DatasetDbModel } = getTypes(this.table);
+
+    console.log(`Get of '${dsId}' `);
+
+    const ds = await DatasetDbModel.get({ id: dsId });
+
+    return this.itemToDataset(ds);
+  }
+
   public async list(): Promise<DatasetApiModel[]> {
     const { DatasetDbModel } = getTypes(this.table);
 
@@ -34,14 +55,7 @@ class DatasetService {
       itemPage = await DatasetDbModel.scan({}, { next, limit: 25 });
 
       for (const item of itemPage) {
-        results.push({
-          id: item.id,
-          name: item.name,
-          description: item.description,
-          committeeId: item.committeeId,
-          committeeDisplayName: item.committeeId,
-          dataUses: item.dataUses,
-        });
+        results.push(this.itemToDataset(item));
       }
 
       next = itemPage.next;

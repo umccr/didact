@@ -1,6 +1,9 @@
 import forge from 'node-forge';
 import base64url from 'base64url';
 import { EdDsaJose } from './ed-dsa-jose';
+import { RsaJose } from './rsa-jose';
+
+export type AnyJose = EdDsaJose | RsaJose;
 
 /**
  * From a given set of keys (including the private key data) - make the equivalent (non-private)
@@ -8,10 +11,24 @@ import { EdDsaJose } from './ed-dsa-jose';
  *
  * @param keys dictionary of kid to private key structure
  */
-export function makeJwks(keys: { [kid: string]: EdDsaJose }): any {
-  const results: EdDsaJose[] = [];
+export function makeJwks(keys: { [kid: string]: AnyJose }): any {
+  const results: AnyJose[] = [];
 
   for (const [kid, keyPrivateJose] of Object.entries(keys)) {
+    if (keyPrivateJose.kty === 'RSA') {
+      if (!keyPrivateJose.dBase64Url) throw Error('Private key for RSA must be specified as a base 64 url string in the dBase64Url field');
+
+      results.push({
+        kty: keyPrivateJose.kty,
+        kid: kid,
+        alg: 'RS256',
+        n: keyPrivateJose.n,
+        e: keyPrivateJose.e,
+      });
+
+      continue;
+    }
+
     // the format of this for ED25519 etc is
     // https://datatracker.ietf.org/doc/html/rfc8037
     // CFRG Elliptic Curve Diffie-Hellman (ECDH) and Signatures in JSON Object Signing and Encryption (JOSE)

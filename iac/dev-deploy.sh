@@ -30,8 +30,8 @@ DOMAIN="dev.umccr.org"
 AUSCERT="arn:aws:acm:ap-southeast-2:843407916570:certificate/aa9a1385-7f72-4f1f-98a5-a5da2eff653b"
 DOMAINZONE="Z13ZMZH3CGX773"
 OIDCHOST="https://cilogon.org"
-OIDCCLIENTID="cilogon:/client_id/56667468a214a06b0c6612e2489a48f"
-OIDCCLIENTSECRET="p9L5ahk4UWhgUQtN7el52z2tr8jDmkiXck9DWAIpw4ZnS4YayJZlzPpm31idQ3RP4Nc0915TCjzrKyvm8MQNvA"
+OIDCCLIENTID="{{resolve:secretsmanager:dev/didact/registry-test.biocommons.org.au:SecretString:client_id}}"
+OIDCCLIENTSECRET="{{resolve:secretsmanager:dev/didact/registry-test.biocommons.org.au:SecretString:client_secret}}"
 
 # note - the use of --no-lookups - even though a dev stack *could* do lookups - because our
 # eventual CI built stack cannot do lookups - we want to disable it in dev as well

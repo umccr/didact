@@ -1,5 +1,5 @@
 import lambdaRequestHandler from 'lambda-request-handler';
-import { app } from './app-concrete';
+import { createApp } from './app-concrete';
 import { setupTestData } from './testing/setup-test-data';
 
 /**
@@ -11,6 +11,8 @@ import { setupTestData } from './testing/setup-test-data';
  */
 const lambdaOnceOnlyInitialisation = async () => {
   console.log('Lambda Cold Start');
+
+  const app = createApp();
 
   // possibly a race condition here.. will remove this as soon as the web deployed version
   // doesn't need test data

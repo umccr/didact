@@ -3,11 +3,7 @@ import { useCombobox } from "downshift";
 import axios from "axios";
 import classNames from "classnames";
 import _ from "lodash";
-
-export type Concept = {
-  id: string;
-  name: string;
-};
+import { Concept } from "./concept";
 
 type Props = {
   ontoServerUrl: string; // "https://genomics.ontoserver.csiro.au

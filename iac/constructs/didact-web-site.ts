@@ -68,6 +68,8 @@ export class DidactWebSite extends Construct {
       LOGIN_HOST: props.oidcLoginHostParam.valueAsString,
       LOGIN_CLIENT_ID: props.oidcLoginClientIdParam.valueAsString,
       LOGIN_CLIENT_SECRET: props.oidcLoginClientSecretParam.valueAsString,
+      LDAP_HOST: "",
+      LDAP_PASSWORD: ""
     };
 
     const functionConstruct = new EcrBasedLambdaFunction(this, "HtmlFunction", {

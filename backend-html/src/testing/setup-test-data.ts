@@ -102,17 +102,17 @@ export async function setupTestData(canDestroyExistingData: boolean) {
   }
 
   {
-    const ds1dataUse: DataUseLimitation = {
-      code: { id: 'DUO:0000042', label: 'GRU' },
-      modifiers: [{ code: { id: 'DUO:0000025', label: 'TS' }, start: '2021-03-01' }],
-    };
-
     await DatasetDbModel.create({
       id: 'urn:fdc:australiangenomics.org.au:2018:study/1',
       name: 'Mitochondrial Flagship',
       committeeId: c2.id,
       description: '45 participants with mitochondrial disorders',
-      dataUses: [ds1dataUse],
+      dataUses: [
+        {
+          code: { id: 'DUO:0000004', label: 'NRES' },
+          modifiers: [],
+        },
+      ],
     });
   }
 
@@ -138,17 +138,18 @@ export async function setupTestData(canDestroyExistingData: boolean) {
   }
 
   {
-    const ds3dataUse: DataUseLimitation = {
-      code: { id: 'DUO:0000004', label: 'NRES' },
-      modifiers: [],
-    };
-
     await DatasetDbModel.create({
       id: 'urn:fdc:australiangenomics.org.au:2018:study/3',
       name: 'Cancer Flagship',
       committeeId: c1.id,
       description: 'A comprehensive cohort of all types of cancer from 1 million participants',
-      dataUses: [ds3dataUse],
+      dataUses: [
+        {
+          code: { id: 'DUO:0000007', label: 'DS' },
+          disease: { id: 'SNOMED:363346000', label: 'Malignant neoplastic disease' },
+          modifiers: [{ code: { id: 'DUO:0000025', label: 'TS' }, start: '2021-03-01' }],
+        },
+      ],
     });
   }
 

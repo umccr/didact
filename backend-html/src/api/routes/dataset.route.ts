@@ -13,5 +13,6 @@ export class DatasetRoute implements IRoute {
 
   private initializeRoutes() {
     this.router.get(`${this.path}`, this.datasetController.listAllDatasets);
+    this.router.get(/^\/dataset\/(.+)/, this.datasetController.getDataset);
   }
 }

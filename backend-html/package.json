@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.9.0",
+    "@aws-sdk/client-secrets-manager": "^3.27.0",
     "@aws-sdk/util-dynamodb": "^3.9.0",
     "@types/serve-favicon": "^2.5.3",
     "axios": "^0.21.1",
@@ -43,6 +44,7 @@
     "jose": "^3.15.4",
     "jsonwebtoken": "^8.5.1",
     "lambda-request-handler": "^0.5.1-alpha1",
+    "ldapjs": "^2.3.1",
     "lodash": "^4.17.21",
     "morgan": "^1.10.0",
     "node-forge": "^0.10.0",

@@ -1,15 +1,19 @@
 import React, { useState } from "react";
 import { LayoutStandardPage } from "../layouts/layout-standard-page";
-import { Concept, ConceptChooser } from "../components/concept-chooser";
-import _ from "lodash";
 import classnames from "classnames";
 import { useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "react-query";
 import axios from "axios";
 import { ApplicationApiModel } from "../../../shared-src/api-models/application";
 import { UserLoggedInContext } from "../providers/user-logged-in-provider";
+import { SnomedChooser } from "../components/concept-chooser/snomed-chooser";
+import { HgncChooser } from "../components/concept-chooser/hgnc-chooser";
+import { Concept } from "../components/concept-chooser/concept";
+import { DatasetApiModel } from "../../../shared-src/api-models/dataset";
+import { ApplicationDataUseMatcher } from "../components/application-data-use-matcher";
 
 export const APPLICATION_EDIT_QUERY_NAME = "application-edit";
+export const APPLICATION_EDIT_DATASET_QUERY_NAME = "application-edit-ds";
 
 export const ApplicationEditPage: React.FC = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
@@ -19,119 +23,72 @@ export const ApplicationEditPage: React.FC = () => {
   const { userList, user, getUserBearer, getUserId } = React.useContext(
     UserLoggedInContext
   );
-  
-  const { isLoading, isError, data, error } = useQuery<ApplicationApiModel>(
+
+  const { data: applicationData } = useQuery<ApplicationApiModel>(
     [APPLICATION_EDIT_QUERY_NAME, applicationId],
     async ({ queryKey }) => {
-      const data = await axios
+      return await axios
         .get<ApplicationApiModel>(`/api/application/${queryKey[1]}`)
         .then((response) => response.data);
-
-      return data;
     }
   );
-  
-  const approveClick = async () => {
-    const apiResponse = await axios
-      .post<{ }>(`/api/application/${applicationId}/approve`, {}, {
-        headers: {
-          Authorization: getUserBearer(user),
-        },
-      })
-      .then((response) => response.data);
 
-    await queryClient.invalidateQueries(APPLICATION_EDIT_QUERY_NAME)
-  }
+  const datasetId = applicationData?.datasetId;
 
-  const unapproveClick = async () => {
-    const apiResponse = await axios
-      .post<{ }>(`/api/application/${applicationId}/unapprove`, {}, {
-        headers: {
-          Authorization: getUserBearer(user),
-        },
-      })
-      .then((response) => response.data);
-
-    await queryClient.invalidateQueries(APPLICATION_EDIT_QUERY_NAME)
-  }
+  const { isIdle, data: datasetData } = useQuery(
+    [APPLICATION_EDIT_DATASET_QUERY_NAME, datasetId],
+    async ({ queryKey }) => {
+      return await axios
+        .get<DatasetApiModel>(`/api/dataset/${queryKey[1]}`)
+        .then((response) => response.data);
+    },
+    {
+      // the query will not execute until the datasetId exists/resolves
+      enabled: !!applicationData,
+    }
+  );
 
   const submitClick = async () => {
     const apiResponse = await axios
-      .post<{ }>(`/api/application/${applicationId}/submit`, {}, {
-        headers: {
-          Authorization: getUserBearer(user),
-        },
-      })
+      .post<{}>(
+        `/api/application/${applicationId}/submit`,
+        {},
+        {
+          headers: {
+            Authorization: getUserBearer(user),
+          },
+        }
+      )
       .then((response) => response.data);
 
-    await queryClient.invalidateQueries(APPLICATION_EDIT_QUERY_NAME)
-  }
+    await queryClient.invalidateQueries(APPLICATION_EDIT_QUERY_NAME);
+  };
 
   const [snomedSelected, setSnomedSelected] = useState(
     {} as { [id: string]: Concept }
   );
 
-  const addToSnomedSelected = (id: string, concept: Concept) => {
-    const permanentConcept = _.cloneDeep(concept);
-
-    // our search process adds in some extra data to the concepts - which whilst not a massive problem - we
-    // look to clean up before saving into the backend form data
-    delete (permanentConcept as any)["hilighted"];
-    delete (permanentConcept as any)["score"];
-
-    setSnomedSelected((oldSelectedValue) => ({
-      ...oldSelectedValue,
-      [permanentConcept.id]: permanentConcept,
-    }));
-  };
-
-  const removeFromSnomedSelected = (id: string) => {
-    const newSelected = { ...snomedSelected };
-    if (id in newSelected) delete newSelected[id];
-
-    setSnomedSelected(newSelected);
-  };
-
   const [hgncSelected, setHgncSelected] = useState(
     {} as { [id: string]: Concept }
   );
 
-  const addToHgncSelected = (id: string, concept: Concept) => {
-    const permanentConcept = _.cloneDeep(concept);
-
-    // our search process adds in some extra data to the concepts - which whilst not a massive problem - we
-    // look to clean up before saving into the backend form data
-    delete (permanentConcept as any)["hilighted"];
-    delete (permanentConcept as any)["score"];
-
-    setHgncSelected((oldSelectedValue) => ({
-      ...oldSelectedValue,
-      [permanentConcept.id]: permanentConcept,
-    }));
-  };
-
-  const removeFromHgncSelected = (id: string) => {
-    const newSelected = { ...hgncSelected };
-    if (id in newSelected) delete newSelected[id];
-
-    setHgncSelected(newSelected);
-  };
-
-  const approveDisabled = data && ['started', 'approved'].includes(data.state);
-  const unapproveDisabled = data && ['submitted', 'started'].includes(data.state);
-  const submitDisabled = data && ['submitted', 'approved', 'rejected'].includes(data.state);
-  const rusDisabled = data && ['submitted', 'approved', 'rejected'].includes(data.state);
+  const submitDisabled =
+    applicationData &&
+    ["submitted", "approved", "rejected"].includes(applicationData.state);
+  const rusDisabled =
+    applicationData &&
+    ["submitted", "approved", "rejected"].includes(applicationData.state);
+  const evaluateEnabled =
+    applicationData && ["submitted", "approved", "rejected"].includes(applicationData.state);
 
   return (
-    // "https://genomics.ontoserver.csiro.au", //"http://snomed.info/sct/32506021000036107"
     <LayoutStandardPage
       pageTitle="Edit Application"
       includeResearcherCommitteeChoice={false}
     >
-      {data && (
+      {applicationData && datasetData && (
         <div>
           <div className="md:grid md:grid-cols-6 md:gap-6">
-
             {/* left header column */}
             <div className="md:col-span-1">
               <div className="px-4 sm:px-0">
@@ -146,19 +103,16 @@ export const ApplicationEditPage: React.FC = () => {
 
             {/* right content column */}
             <div className="mt-5 md:mt-0 md:col-span-5 md:space-y-6">
-
               <div className="shadow sm:rounded-md sm:overflow-hidden">
                 <div className="px-4 py-5 bg-white space-y-6 sm:p-6">
                   {/* application id */}
                   <div className="grid grid-cols-3 gap-6">
                     <div className="col-span-3 sm:col-span-2">
-                      <label
-                        className="block text-sm font-medium text-gray-700"
-                      >
+                      <label className="block text-sm font-medium text-gray-700">
                         Application Id
                       </label>
                       <div className="mt-1 flex rounded-md shadow-sm">
-                        {data.id}
+                        {applicationData.id}
                       </div>
                     </div>
                   </div>
@@ -166,13 +120,11 @@ export const ApplicationEditPage: React.FC = () => {
                   {/* application state */}
                   <div className="grid grid-cols-3 gap-6">
                     <div className="col-span-3 sm:col-span-2">
-                      <label
-                        className="block text-sm font-medium text-gray-700"
-                      >
+                      <label className="block text-sm font-medium text-gray-700">
                         Application State
                       </label>
                       <div className="mt-1 flex rounded-md shadow-sm">
-                        {data.state}
+                        {applicationData.state}
                       </div>
                     </div>
                   </div>
@@ -189,27 +141,6 @@ export const ApplicationEditPage: React.FC = () => {
                     >
                       Submit
                     </button>
-                    <button
-                      onClick={approveClick}
-                      className={classnames("btn", "btn-blue", {
-                        "opacity-50": approveDisabled,
-                        "cursor-not-allowed": approveDisabled,
-                      })}
-                      disabled={approveDisabled}
-                    >
-                      Approve
-                    </button>
-
-                    <button
-                      onClick={unapproveClick}
-                      className={classnames("btn", "btn-blue", {
-                        "opacity-50": unapproveDisabled,
-                        "cursor-not-allowed": unapproveDisabled,
-                      })}
-                      disabled={unapproveDisabled}
-                    >
-                      Unapprove
-                    </button>
                   </div>
                 </div>
               </div>
@@ -221,13 +152,12 @@ export const ApplicationEditPage: React.FC = () => {
                     <div className="grid grid-cols-3 gap-6">
                       <div className="col-span-3 sm:col-span-2">
                         <label
-                          htmlFor="company-website"
                           className="block text-sm font-medium text-gray-700"
                         >
                           Dataset Id
                         </label>
                         <div className="mt-1 flex rounded-md shadow-sm">
-                          {data.datasetId}
+                          {applicationData.datasetId} ({datasetData.name})
                         </div>
                       </div>
                     </div>
@@ -243,10 +173,22 @@ export const ApplicationEditPage: React.FC = () => {
                         <textarea
                           id="rus"
                           rows={5}
-                          className={classnames("shadow-sm", "focus:ring-indigo-500", "focus:border-indigo-500", "mt-1", "block", "w-full", "sm:text-sm", "border", "border-gray-300", "rounded-md", {
-                            "opacity-50": rusDisabled
-                          })}
-                          value={data.researchUseStatement}
+                          className={classnames(
+                            "shadow-sm",
+                            "focus:ring-indigo-500",
+                            "focus:border-indigo-500",
+                            "mt-1",
+                            "block",
+                            "w-full",
+                            "sm:text-sm",
+                            "border",
+                            "border-gray-300",
+                            "rounded-md",
+                            {
+                              "opacity-50": rusDisabled,
+                            }
+                          )}
+                          value={applicationData.researchUseStatement}
                           disabled={rusDisabled}
                         />
                       </div>
@@ -269,32 +211,16 @@ export const ApplicationEditPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <ConceptChooser
-                        ontoServerUrl="https://r4.ontoserver.csiro.au/fhir"
-                        systemUri="http://snomed.info/sct/32506021000036107/version/20210731?fhir_vs=refset/32570581000036105"
-                        systemVersion="http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/20210731"
-                        rootConceptId="HP:0000118"
-                        label="Disease Specific Study of Condition(s)"
-                        placeholder="e.g. ataxia, hypoplasia"
-                        codePrefix="SNOMED"
+                      <SnomedChooser
                         selected={snomedSelected}
-                        addToSelected={addToSnomedSelected}
-                        removeFromSelected={removeFromSnomedSelected}
+                        setSelected={setSnomedSelected}
                       />
                     </div>
 
                     <div>
-                      <ConceptChooser
-                        ontoServerUrl="https://genomics.ontoserver.csiro.au/fhir"
-                        systemUri="http://www.genenames.org"
-                        systemVersion="http://www.genenames.org|20100712"
-                        rootConceptId="HP:0000118"
-                        label="Gene Specific Study"
-                        placeholder="e.g. SHOX2, AATF"
-                        codePrefix="HGNC"
+                      <HgncChooser
                         selected={hgncSelected}
-                        addToSelected={addToHgncSelected}
-                        removeFromSelected={removeFromHgncSelected}
+                        setSelected={setHgncSelected}
                       />
                     </div>
 
@@ -352,6 +278,16 @@ export const ApplicationEditPage: React.FC = () => {
                   </div>
                 </div>
               </form>
+
+              {evaluateEnabled && (
+                <ApplicationDataUseMatcher
+                  applicationId={applicationData.id}
+                  applicationState={applicationData.state}
+                  dataUses={datasetData.dataUses}
+                  snomed={snomedSelected}
+                  hgnc={hgncSelected}
+                />
+              )}
             </div>
           </div>
         </div>
