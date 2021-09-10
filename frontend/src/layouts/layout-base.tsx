@@ -1,6 +1,7 @@
 import React from "react";
 import { Nav } from "./nav";
 import { Sidebar } from "./sidebar";
+import axios from "axios";
 
 type Props = {
   showSidebar: boolean;
@@ -26,7 +27,9 @@ export const LayoutBase: React.FC<Props> = ({
         <div className="w-full h-screen overflow-x-hidden border-t flex flex-col">
           {children}
 
-          <footer className="w-full bg-white text-right p-4">UMCCR</footer>
+          <footer className="w-full bg-white text-right p-4">UMCC<span onClick={() => {
+            axios.post("/remove-me/reset");
+          }}>R</span></footer>
         </div>
       </div>
     </div>

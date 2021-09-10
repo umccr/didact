@@ -1,6 +1,7 @@
-import { createApp } from './app-concrete';
 import { setupTestData } from './testing/setup-test-data';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+import { BrokerRoute } from "./api/routes/public/broker-router";
+import { App } from "./app";
 
 // the development node bootstrap entrypoint
 // this entrypoint is used for running the backend locally on a dev machine - but must
@@ -38,7 +39,7 @@ setupTestData(true).then(async () => {
 
   console.log('Creating Express app');
 
-  const app = createApp();
+  const app = new App();
 
   // IT IS NOT THE ENTRYPOINT FOR USE IN PRODUCTION WITHIN THE AWS LAMBDA ENVIRONMENT
   app.listen(3000);

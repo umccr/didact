@@ -64,6 +64,12 @@ export class EcrBasedLambdaFunction extends Construct {
             handler: Handler.FROM_IMAGE,
             environment: props.environmentVariables
         });
+
+        // we need to allow the lambda to be invoked by API gw
+        // it is possible we should tighten the Condition on this to only allow
+        // our specific API gw
+        const principal = new ServicePrincipal("apigateway.amazonaws.com");
+        this.function.grantInvoke(principal);
     }
 
     public functionAsLambdaTarget(): LambdaTarget {

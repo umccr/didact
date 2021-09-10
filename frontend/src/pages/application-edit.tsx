@@ -20,14 +20,14 @@ export const ApplicationEditPage: React.FC = () => {
 
   const queryClient = useQueryClient();
 
-  const { userList, user, getUserBearer, getUserId } = React.useContext(
+  const { createAxiosInstance, userId } = React.useContext(
     UserLoggedInContext
   );
 
   const { data: applicationData } = useQuery<ApplicationApiModel>(
     [APPLICATION_EDIT_QUERY_NAME, applicationId],
     async ({ queryKey }) => {
-      return await axios
+      return await createAxiosInstance()
         .get<ApplicationApiModel>(`/api/application/${queryKey[1]}`)
         .then((response) => response.data);
     }
@@ -38,7 +38,7 @@ export const ApplicationEditPage: React.FC = () => {
   const { isIdle, data: datasetData } = useQuery(
     [APPLICATION_EDIT_DATASET_QUERY_NAME, datasetId],
     async ({ queryKey }) => {
-      return await axios
+      return await createAxiosInstance()
         .get<DatasetApiModel>(`/api/dataset/${queryKey[1]}`)
         .then((response) => response.data);
     },
@@ -49,15 +49,10 @@ export const ApplicationEditPage: React.FC = () => {
   );
 
   const submitClick = async () => {
-    const apiResponse = await axios
+    const apiResponse = await createAxiosInstance()
       .post<{}>(
         `/api/application/${applicationId}/submit`,
-        {},
-        {
-          headers: {
-            Authorization: getUserBearer(user),
-          },
-        }
+        {}
       )
       .then((response) => response.data);
 

@@ -1,39 +1,39 @@
 import { Router } from 'express';
-import { makeJwks } from '../../business/services/visa/make-jwks';
-import { keyDefinitions } from '../../business/services/visa/keys';
-import { makeVisaSigned } from '../../business/services/visa/make-visa';
-import { GeneralSign } from 'jose/jws/general/sign';
-import { generateKeyPair } from 'jose/util/generate_key_pair';
+import { makeJwks } from '../../../business/services/visa/make-jwks';
+import { keyDefinitions } from '../../../business/services/visa/keys';
+import { IRoute } from '../_routes.interface';
+import { VisaController } from '../../controllers/visa-controller';
 
-/**
- * NOTE: this is all just a vehicle for experimenting with passports and visas.
- * So these endpoints are public where in reality they would be secured for only
- * the use of the broker etc.
- */
+export class WellKnownRoute implements IRoute {
+  public path = '/.well-known';
+  public router = Router();
+  public visaController = new VisaController();
 
-export const wellKnownRouter = Router();
+  constructor() {
+    this.initializeRoutes();
+  }
 
-wellKnownRouter.get('/openid-configuration', async (req, res, next) => {
-  const isLocal = req.connection.localAddress === req.connection.remoteAddress;
+  private initializeRoutes() {
+    this.router.get('/openid-configuration', async (req, res, next) => {
+      const isLocal = req.connection.localAddress === req.connection.remoteAddress;
 
-  let issuer: string;
-  if (isLocal) issuer = `http://${req.hostname}`;
-  else issuer = `https://${req.hostname}`;
+      let issuer: string;
+      if (isLocal) issuer = `http://${req.hostname}`;
+      else issuer = `https://${req.hostname}`;
 
-  const config = {
-    issuer: issuer,
-    jwks_uri: issuer + '/.well-known/jwks',
-  };
+      const config = {
+        issuer: issuer,
+        jwks_uri: issuer + '/.well-known/jwks',
+      };
 
-  res.status(200).json(config);
-});
+      res.status(200).json(config);
+    });
 
-wellKnownRouter.get(`/jwks`, async (req, res, next) => {
-  res.status(200).json(makeJwks(keyDefinitions));
-});
-
-
-
+    this.router.get(`/jwks`, async (req, res, next) => {
+      res.status(200).json(makeJwks(keyDefinitions));
+    });
+  }
+}
 
 /*
 RFC 8410                  Safe Curves for X.509              August 2018

@@ -9,6 +9,7 @@ import { getTable } from '../db/didact-table-utils';
 import { getTypes } from '../db/didact-table-types';
 import { ApplicationApiModel } from '../../../../shared-src/api-models/application';
 import { PERSON_NAMES } from '../../testing/setup-test-data';
+import { ReleaseArtifactApiModel } from '../../../../shared-src/api-models/release';
 
 class ApplicationService {
   private table: Table;
@@ -214,12 +215,38 @@ class ApplicationService {
     return this.asApplication(applicationId);
   }
 
+  public async getApplicationReleaseArtifacts(applicationId: string): Promise<ReleaseArtifactApiModel[]> {
+    const { ApplicationReleaseArtifactDbModel } = getTypes(this.table);
+
+    const artifactsSorted: ReleaseArtifactApiModel[] = [];
+    {
+      let aeNext: any = null;
+      let aeItemPage: Paged<any[]>;
+      do {
+        aeItemPage = await ApplicationReleaseArtifactDbModel.find({ applicationId: applicationId });
+
+        for (const item of aeItemPage.values()) {
+          artifactsSorted.push({
+            path: item.path,
+            chromosomes: item.chromosomes ? item.chromosomes.split(' ') : [],
+          });
+        }
+
+        aeNext = aeItemPage.next;
+      } while (aeNext);
+    }
+
+    artifactsSorted.sort((a, b) => a.path.localeCompare(b.path));
+
+    return artifactsSorted;
+  }
+
   /**
-   * Return a list of all dataset ids that this applicant is approved to access.
+   * Return a list of all *approved* application ids that this applicant is approved to access.
    *
    * @param subjectId
    */
-  public async findApprovedDatasetsInvolvedAsApplicant(subjectId: string): Promise<string[]> {
+  public async findApprovedApplicationsInvolvedAsApplicant(subjectId: string): Promise<string[]> {
     const { ApplicationDbModel } = getTypes(this.table);
 
     // find all applications this subject is involved with
@@ -234,7 +261,7 @@ class ApplicationService {
     for (const appId of applications) {
       const appData = await ApplicationDbModel.get({ id: appId });
 
-      if (appData.state == 'approved') results.add(appData.datasetId);
+      if (appData.state == 'approved') results.add(appData.id);
     }
 
     return Array.from(results.values());

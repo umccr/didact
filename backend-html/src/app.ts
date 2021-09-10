@@ -14,8 +14,19 @@ import * as _ from 'lodash';
 import cryptoRandomString from 'crypto-random-string';
 import got from 'got';
 import { AppEnvName } from '../../shared-src/app-env-name';
-import { wellKnownRouter } from './api/routes/well-known-router';
 import { getMandatoryEnv } from './app-env';
+import { resetRouter } from './api/routes/reset-router';
+import { expressJwtSecret } from 'jwks-rsa';
+import jwt from 'express-jwt';
+import { OpenIdRoute } from './api/routes/public/openid-router';
+import { WellKnownRoute } from './api/routes/public/well-known-router';
+import { VisaTestRoute } from './api/routes/visatest.route';
+import { DatasetRoute } from './api/routes/protected/dataset.route';
+import { ApplicationRoute } from './api/routes/protected/application.route';
+import { VisaRoute } from './api/routes/service-service/visa.route';
+import { ManifestRoute } from './api/routes/service-service/manifest.route';
+import { BrokerRoute } from './api/routes/public/broker-router';
+import { createJwksCallback } from "./api/routes/_routes.utils";
 
 export class App {
   public app: express.Application;
@@ -34,7 +45,7 @@ export class App {
   // this makes it effectively a short lived nonce)
   private readonly nonce: string;
 
-  constructor(routes: IRoute[]) {
+  constructor() {
     this.app = express();
     this.env = process.env.NODE_ENV || 'development';
 
@@ -64,8 +75,15 @@ export class App {
       return new URLSearchParams(queryString);
     });
 
+    const secretCallback = createJwksCallback();
+
     this.initializeMiddlewares();
-    this.initializeRoutes(routes);
+
+    this.initializeUnsecuredRoutes([new WellKnownRoute(), new VisaTestRoute(), new BrokerRoute()]);
+    this.initializeServiceServiceRoutes([new VisaRoute(), new ManifestRoute()]);
+    // this has to be last because it seems to alter all the api registrations
+    // (TBD work out why.. probably should read the app.use() docs)
+    this.initializeSecuredRoutes([new DatasetRoute(secretCallback), new ApplicationRoute(secretCallback)]);
 
     // we cannot directly use the standard static file middleware for express
     // because we have a behaviour for index.html that is heavily customised
@@ -261,7 +279,7 @@ export class App {
   }
 
   private initializeMiddlewares() {
-    // we want to serve this first so it avoid any logging - as it is irrelevant to us
+    // we want to serve this first so it avoids any logging - as it is irrelevant to us
     this.app.use(favicon(path.join(__dirname, 'favicon.ico')));
 
     // setup logging levels based on environment
@@ -271,27 +289,6 @@ export class App {
       this.app.use(morgan('short'));
     }
 
-    /*
-    let defaultSecurityPolicyDirectives = helmet.contentSecurityPolicy.getDefaultDirectives();
-    defaultSecurityPolicyDirectives['connect-src'] = ["'self'", 'https://*.google-analytics.com'];
-    defaultSecurityPolicyDirectives['img-src'] = ["'self'", 'data:', 'https://*.googleapis.com', 'https://*.gstatic.com'];
-    defaultSecurityPolicyDirectives['script-src'] = [
-      "'self'",
-      'data:',
-      `'nonce-${this.nonce}'`,
-      'https://*.googleapis.com',
-      'https://*.gstatic.com',
-      'https://*.googletagmanager.com',
-    ];
-    // this.app.use(
-    //   helmet({
-    //     contentSecurityPolicy: {
-    //       directives: defaultSecurityPolicyDirectives,
-    //     },
-    //   }),
-    // );
-     */
-
     this.app.use(helmet.hidePoweredBy());
     this.app.use(hpp());
     this.app.use(express.json());
@@ -299,72 +296,31 @@ export class App {
     this.app.use(cookieParser());
   }
 
-  private initializeRoutes(routes: IRoute[]) {
+  private initializeUnsecuredRoutes(routes: IRoute[]) {
     // we have a temporary hacky workaround whilst waiting for PKCE support from cilogon
     const loginHost = getMandatoryEnv('LOGIN_HOST');
-
     if (loginHost.includes('cilogon')) {
-      const oauthRouter = Router();
-
-      const loginClientId = getMandatoryEnv('LOGIN_CLIENT_ID');
-      const loginClientSecret = getMandatoryEnv('LOGIN_CLIENT_SECRET');
-
-      oauthRouter.post(`/exchange`, async (req, res, next) => {
-        console.log('Code exchange');
-        console.log(req.body);
-        const referrerUrl = new URL(req.get('referer'));
-        referrerUrl.search = '';
-        console.log(referrerUrl.href);
-        // because we (the backend) have the secrets - we are the only party that can do an code<->token exchange
-        // (this is very much NOT NORMAL oauth but in the absence of PKCE - this hybrid approach allows us to
-        // continue until PKCE is supported by CIlogon)
-        try {
-          console.log(`Doing exchange POST to endpoint ${loginHost} with id ${loginClientId} and secret ${loginClientSecret}`);
-          const tokenResponse = await got
-            .post(`${loginHost}/oauth2/token`, {
-              form: {
-                grant_type: 'authorization_code',
-                client_secret: loginClientSecret,
-                client_id: loginClientId,
-                // note: this redirect is not actually used but must be specified and match one in the config
-                redirect_uri: referrerUrl.href,
-                // redirect_uri: 'http://localhost:3000/login/callback',
-                code: req.body.code,
-              },
-            })
-            .json();
-          res.status(200).json(tokenResponse);
-        } catch (error) {
-          console.log('Code exchange failed');
-
-          if (error.response) {
-            /*
-             * The request was made and the server responded with a
-             * status code that falls out of the range of 2xx
-             */
-            console.log(error.response.data);
-            console.log(error.response.status);
-            console.log(error.response.headers);
-          } else if (error.request) {
-            /*
-             * The request was made but no response was received, `error.request`
-             * is an instance of XMLHttpRequest in the browser and an instance
-             * of http.ClientRequest in Node.js
-             */
-            console.log(error.request);
-          } else {
-            // Something happened in setting up the request and triggered an Error
-            console.log('Error', error.message);
-          }
-          console.log(error);
-          res.status(500).json({ message: 'Code exchange failed' });
-        }
-      });
-      this.app.use('/login', oauthRouter);
+      routes.push(new OpenIdRoute());
     }
+    // we have the ability to reset all the data - which is definitely something to remove!
+    this.app.use('/remove-me', resetRouter);
 
-    this.app.use('/.well-known', wellKnownRouter);
+    routes.forEach(route => {
+      this.app.use(route.path, route.router);
+    });
+  }
 
+  private initializeSecuredRoutes(routes: IRoute[]) {
+    routes.forEach(route => {
+      this.app.use('/api', route.router);
+    });
+  }
+
+  private initializeServiceServiceRoutes(routes: IRoute[]) {
+    // so this is where we would institute even *more* security as these
+    // are routes we are expecting calls from other trusted services
+    // (ala registered htsget endpoints etc)
+    // AT THE MOMENT IS PUBLIC
     routes.forEach(route => {
       this.app.use('/api', route.router);
     });

@@ -13,7 +13,7 @@ import { useHistory } from "react-router-dom";
 export const ApplicationNewPage: React.FC = () => {
   const { push } = useHistory();
 
-  const { userList, user, getUserBearer, getUserId } = React.useContext(
+  const { createAxiosInstance, userId } = React.useContext(
     UserLoggedInContext
   );
 
@@ -25,17 +25,13 @@ export const ApplicationNewPage: React.FC = () => {
 
   const onSubmit: SubmitHandler<ApplicationApiModel> = async (formData) => {
     const newApplication: ApplicationApiNewModel = {
-      principalInvestigatorId: getUserId(formData.principalInvestigatorId),
+      principalInvestigatorId: userId,
       projectTitle: formData.projectTitle,
       datasetId: formData.datasetId,
     };
 
-    const apiData = await axios
-      .post<ApplicationApiModel>(`/api/application`, newApplication, {
-        headers: {
-          Authorization: getUserBearer(user),
-        },
-      })
+    const apiData = await createAxiosInstance()
+      .post<ApplicationApiModel>(`/api/application`, newApplication)
       .then((response) => response.data);
 
     push(`/p/application-edit/${apiData.id}`);
@@ -72,7 +68,7 @@ export const ApplicationNewPage: React.FC = () => {
                         Applicant
                       </label>
                       <div className="mt-1 flex rounded-md shadow-sm">
-                        <span>{user}</span>
+                        <span>{userId}</span>
                       </div>
                     </div>
                   </div>
@@ -91,7 +87,7 @@ export const ApplicationNewPage: React.FC = () => {
                           id="principal-investigator-id"
                           {...register("principalInvestigatorId")}
                         >
-                          {userList.map((u, index) => (
+                          {['a', 'b'].map((u, index) => (
                             <option key={index} value={u}>
                               {u}
                             </option>

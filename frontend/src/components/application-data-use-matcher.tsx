@@ -31,18 +31,13 @@ export const ApplicationDataUseMatcher: React.FC<Props> = ({
 }) => {
   const queryClient = useQueryClient();
 
-  const { user, getUserBearer } = React.useContext(UserLoggedInContext);
+  const { createAxiosInstance } = React.useContext(UserLoggedInContext);
 
   const approveClick = async () => {
-    const apiResponse = await axios
+    const apiResponse = await createAxiosInstance()
       .post<{}>(
         `/api/application/${applicationId}/approve`,
-        {},
-        {
-          headers: {
-            Authorization: getUserBearer(user),
-          },
-        }
+        {}
       )
       .then((response) => response.data);
 
@@ -50,15 +45,10 @@ export const ApplicationDataUseMatcher: React.FC<Props> = ({
   };
 
   const unapproveClick = async () => {
-    const apiResponse = await axios
+    const apiResponse = await createAxiosInstance()
       .post<{}>(
         `/api/application/${applicationId}/unapprove`,
-        {},
-        {
-          headers: {
-            Authorization: getUserBearer(user),
-          },
-        }
+        {}
       )
       .then((response) => response.data);
 

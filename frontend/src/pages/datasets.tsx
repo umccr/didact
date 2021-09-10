@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useContext } from "react";
 import { LayoutStandardPage } from "../layouts/layout-standard-page";
 import { useQuery } from "react-query";
 import axios from "axios";
 import { DatasetApiModel } from "../../../shared-src/api-models/dataset";
 import { DataUseTable } from "../components/data-use-table";
+import { UserLoggedInContext } from "../providers/user-logged-in-provider";
 
 type DatasetDivProps = {
   dataset: DatasetApiModel;
@@ -53,8 +54,10 @@ const DatasetDiv: React.FC<DatasetDivProps> = ({ dataset }) => {
 };
 
 export const DatasetsPage: React.FC = () => {
+  const { createAxiosInstance, userId } = useContext(UserLoggedInContext);
+
   const { isLoading, isError, data, error } = useQuery("ds", async () => {
-    const data = await axios
+    const data = await createAxiosInstance()
       .get<DatasetApiModel[]>(`/api/dataset`)
       .then((response) => response.data);
 

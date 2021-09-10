@@ -1,6 +1,6 @@
 import lambdaRequestHandler from 'lambda-request-handler';
-import { createApp } from './app-concrete';
 import { setupTestData } from './testing/setup-test-data';
+import { App } from "./app";
 
 /**
  * A one off initialisation async that can be used to set up the environment with
@@ -12,11 +12,7 @@ import { setupTestData } from './testing/setup-test-data';
 const lambdaOnceOnlyInitialisation = async () => {
   console.log('Lambda Cold Start');
 
-  const app = createApp();
-
-  // possibly a race condition here.. will remove this as soon as the web deployed version
-  // doesn't need test data
-  setupTestData(false);
+  const app = new App();
 
   console.log('Lambda Cold Start End');
 

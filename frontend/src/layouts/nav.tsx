@@ -20,7 +20,7 @@ export const Nav: React.FC<Props> = ({  showLinks }) => {
     UserModeContext
   );
 
-  const { userList, user, setUser } = React.useContext(
+  const { userDisplayName } = React.useContext(
       UserLoggedInContext
   );
 
@@ -76,11 +76,7 @@ export const Nav: React.FC<Props> = ({  showLinks }) => {
           )}
         </div>
         <div className="relative w-1/4 flex justify-end">
-          <select name="select" onChange={(e) => {setUser(e.target.value)}}>
-            {userList.map((u) => {
-              return (<option value={u} selected={user === u}>{u}</option>);
-            })}
-          </select>
+          <p>{userDisplayName}</p>
 
 
             {/*

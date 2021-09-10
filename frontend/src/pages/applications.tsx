@@ -13,21 +13,16 @@ import classnames from "classnames";
 export const ApplicationsPage: React.FC = () => {
   const { push } = useHistory();
   const { mode } = useContext(UserModeContext);
-  const { user, getUserBearer } = useContext(UserLoggedInContext);
+  const { createAxiosInstance, userId } = useContext(UserLoggedInContext);
 
   const { isLoading, isError, data, error } = useQuery(
-    ["applications", mode, user],
+    ["applications", mode, userId],
     async ({ queryKey }) => {
-      const data = await axios
+      const data = await createAxiosInstance()
         .get<ApplicationApiModel[]>(
           queryKey[1] === "committee"
             ? `/api/application-c`
-            : `/api/application-r`,
-          {
-            headers: {
-              Authorization: getUserBearer(queryKey[2]),
-            },
-          }
+            : `/api/application-r`
         )
         .then((response) => response.data);
 

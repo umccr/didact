@@ -8,10 +8,12 @@ import { DataUseLimitation } from '../../../shared-src/api-models/data-use-limit
 // whilst the user management is developed
 export const PERSON_BOB = 'https://nagim.dev/p/ertyu-asrqe-34526';
 export const PERSON_ALICE = 'https://nagim.dev/p/saqwfe-bvgfr-65987';
-export const PERSON_ANDREW = 'https://nagim.dev/p/iukjm-ggypp-43356';
+export const PERSON_ANDREW_UNI = 'https://nagim.dev/p/wjaha-ppqrg-10000';
+export const PERSON_ANDREW_GMAIL = 'https://nagim.dev/p/kfuus-aodnv-10000';
 
 export const PERSON_NAMES = {
-  [PERSON_ANDREW]: 'Andrew Patterson',
+  [PERSON_ANDREW_UNI]: 'Andrew Patterson Uni',
+  [PERSON_ANDREW_GMAIL]: 'Andrew Patterson Gmail',
   [PERSON_ALICE]: 'Alice Smith',
   [PERSON_BOB]: 'Bob Wiseman',
 };
@@ -63,7 +65,14 @@ export async function setupTestData(canDestroyExistingData: boolean) {
 
   await deleteAll(table);
 
-  const { DatasetDbModel, CommitteeDbModel, CommitteeMemberDbModel, ApplicationDbModel, ApplicationEventDbModel } = getTypes(table);
+  const {
+    DatasetDbModel,
+    CommitteeDbModel,
+    CommitteeMemberDbModel,
+    ApplicationDbModel,
+    ApplicationEventDbModel,
+    ApplicationReleaseArtifactDbModel,
+  } = getTypes(table);
 
   let c1;
   {
@@ -90,7 +99,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
 
     await CommitteeMemberDbModel.create({
       committeeId: c2.id,
-      personId: PERSON_ANDREW,
+      personId: PERSON_ANDREW_UNI,
       role: 'administrator',
     });
 
@@ -113,6 +122,68 @@ export async function setupTestData(canDestroyExistingData: boolean) {
           modifiers: [],
         },
       ],
+    });
+  }
+
+  /**
+   * The 10g project - a proper fake dataset.
+   */
+  {
+    const ds10g = await DatasetDbModel.create({
+      id: 'urn:fdc:thetengenomeproject.org:2018:phase1',
+      name: '10g Project',
+      committeeId: c2.id,
+      description: 'A subset of 10 subjects from the 1000g project',
+      dataUses: [
+        {
+          code: { id: 'DUO:0000006', label: 'HMB' },
+          modifiers: [],
+        },
+      ],
+    });
+
+    const app10g = await ApplicationDbModel.create({
+      id: '8XZF4195109CIIERC35P577HAM',
+      applicantId: PERSON_ANDREW_UNI,
+      principalInvestigatorId: PERSON_BOB,
+      datasetId: ds10g.id,
+      projectTitle: 'Selective access to variant data',
+      researchUseStatement: 'Can we do it',
+      nonTechnicalStatement: 'Simpler',
+      state: 'approved',
+    });
+
+    await ApplicationEventDbModel.create({
+      applicationId: app10g.id,
+      action: 'create',
+      when: new Date(2021, 4, 13, 15, 44, 21),
+      byId: PERSON_ANDREW_UNI,
+      as: 'applicant',
+      detail: 'I filled in all the data',
+    });
+
+    // we should fill in more events here - but for demo purposes not needed
+
+    // we put this application into an automatically approved state
+    // and include dataset details (that we would have built on approval by
+    // querying gen3 etc)
+    await ApplicationReleaseArtifactDbModel.create({
+      applicationId: app10g.id,
+      path: 'reads/10g/https/HG00096',
+    });
+    await ApplicationReleaseArtifactDbModel.create({
+      applicationId: app10g.id,
+      path: 'variants/10g/https/HG00096',
+    });
+    await ApplicationReleaseArtifactDbModel.create({
+      applicationId: app10g.id,
+      path: 'variants/10g/https/HG00097',
+      chromosomes: 'chr1 chr2 chr3',
+    });
+    await ApplicationReleaseArtifactDbModel.create({
+      applicationId: app10g.id,
+      path: 'variants/10g/https/HG00099',
+      chromosomes: 'chr11 chr12',
     });
   }
 
@@ -160,7 +231,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       // id would normally be left out and will be autocreated - but for consistency of test scenarios
       // we actually set it here in the test data
       id: '0RAP8I75101YTG08C454H7DME3',
-      applicantId: PERSON_ANDREW,
+      applicantId: PERSON_ANDREW_UNI,
       principalInvestigatorId: PERSON_BOB,
       datasetId: 'urn:fdc:australiangenomics.org.au:2018:study/3',
       projectTitle: 'Use of Data in Genomic Research Study',
@@ -173,7 +244,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       applicationId: app1.id,
       action: 'create',
       when: new Date(2021, 4, 13, 15, 44, 21),
-      byId: PERSON_ANDREW,
+      byId: PERSON_ANDREW_UNI,
       as: 'applicant',
       detail: 'was good',
     });
@@ -191,7 +262,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       applicationId: app1.id,
       action: 'comment',
       when: new Date(2021, 4, 16, 15, 44, 21),
-      byId: PERSON_ANDREW,
+      byId: PERSON_ANDREW_UNI,
       as: 'applicant',
       detail: 'I made some changes now',
     });

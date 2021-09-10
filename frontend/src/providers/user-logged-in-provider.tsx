@@ -1,64 +1,61 @@
-import React, { useState } from "react";
-import _ from "lodash";
+import React from "react";
+import axios, { AxiosInstance } from "axios";
+import { useOktaAuth } from "@okta/okta-react";
 
 /**
  * NOTE: this list needs to be kept up to date with that set up in backend setup-tests.
  * In reality this will be driven by an actual identity provider.
  */
 const masterNagims: { [id: string]: string } = {
-  Andrew: "https://nagim.dev/p/iukjm-ggypp-43356",
-  Bob: "https://nagim.dev/p/ertyu-asrqe-34526",
-  Alice: "https://nagim.dev/p/saqwfe-bvgfr-65987",
+  "https://nagim.dev/p/wjaha-ppqrg-10000": "Andrew P",
 };
 
 export type UserLoggedIn = {
-  userList: string[];
-  user: string;
+  createAxiosInstance: () => AxiosInstance;
 
-  setUser: (user: string) => void;
-  getUserBearer: (user: string) => string;
-  getUserId: (user: string) => string;
+  loggedIn: boolean;
+  userId: string;
+  userDisplayName: string;
 };
 
-function makeBearer(user: string): string {
-  return `Bearer ${makeId(user)}`;
-}
+const defaultValue = {
+  createAxiosInstance: () => axios.create({}),
+  loggedIn: false,
+  userId: "not logged in user id",
+  userDisplayName: "not logged in",
+};
 
-function makeId(user: string): string {
-  if (user in masterNagims) return `${masterNagims[user]}`;
-
-  return `notknownuser`;
-}
-
-export const UserLoggedInContext = React.createContext<UserLoggedIn>({
-  userList: _.keys(masterNagims),
-  user: "Andrew",
-  setUser: (_: string) => {},
-  getUserBearer: (_: string) => "",
-  getUserId: (_: string) => "",
-});
+export const UserLoggedInContext = React.createContext<UserLoggedIn>(
+  defaultValue
+);
 
 /**
- * This is a provider that holds state of the logged in user.
- * THIS IS A TEMPORARY CONTEXT THAT WOULD BE REMOVED AS SOON AS OUR IDP IS
- * ASSERTED CORRECT IDENTITIES.
+ * A provider that provides useful data out of the more raw Okta
+ * context.
  *
  * @param props
  * @constructor
  */
 export const UserLoggedInProvider = (props: any) => {
-  const [user, setUser] = useState<string>("Andrew");
+  const { authState } = useOktaAuth();
+
+  const value =
+    authState && authState.isAuthenticated && authState.accessToken
+      ? {
+          createAxiosInstance: () =>
+            axios.create({
+              headers: {
+                Authorization: `Bearer ${authState.accessToken?.accessToken}`,
+              },
+            }),
+          loggedIn: true,
+          userId: authState.idToken?.claims["sub"] || "no subject",
+          userDisplayName: authState.idToken?.claims["name"] || "no name claim",
+        }
+      : defaultValue;
 
   return (
-    <UserLoggedInContext.Provider
-      value={{
-        userList: _.keys(masterNagims),
-        user: user,
-        setUser: setUser,
-        getUserBearer: makeBearer,
-        getUserId: makeId,
-      }}
-    >
+    <UserLoggedInContext.Provider value={value}>
       {props.children}
     </UserLoggedInContext.Provider>
   );

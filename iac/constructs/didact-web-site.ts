@@ -10,6 +10,7 @@ import { Construct } from "constructs";
 import { EcrBasedLambdaFunction } from "./ecr-based-lambda-function";
 import { MultiTargetLoadBalancer } from "./multi-target-load-balancer";
 import { AppEnvName } from "../../shared-src/app-env-name";
+import { WebsiteApiGateway } from "./website-api-gateway";
 
 export interface StaticSiteProps {
   vpcParam: CfnParameter;
@@ -79,7 +80,7 @@ export class DidactWebSite extends Construct {
       environmentVariables: envs,
     });
 
-    const albConstruct = new MultiTargetLoadBalancer(this, "LoadBalancer", {
+    /*const albConstruct = new MultiTargetLoadBalancer(this, "LoadBalancer", {
       vpc: vpc,
       certificateArn: props.albCertificateArnParam.valueAsString,
       nameHost: props.albNameHostParam.valueAsString,
@@ -87,7 +88,15 @@ export class DidactWebSite extends Construct {
       nameZoneId: props.albNameZoneIdParam.valueAsString,
       targetDefault: functionConstruct.functionAsLambdaTarget(),
       targetPaths: {},
-    });
+    }); */
+
+    const apiGateway = new WebsiteApiGateway(this, "ApiGateway", {
+      certificateArn: props.albCertificateArnParam.valueAsString,
+      nameHost: props.albNameHostParam.valueAsString,
+      nameDomain: props.albNameDomainParam.valueAsString,
+      nameZoneId: props.albNameZoneIdParam.valueAsString,
+      targetDefault: functionConstruct.function
+    })
   }
 
   /**

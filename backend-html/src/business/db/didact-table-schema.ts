@@ -92,5 +92,15 @@ export const DidactTableSchema = {
       gs1pk: { type: String, value: 'appEv#${byId}' },
       gs1sk: { type: String, value: 'app#${applicationId}' },
     },
+    ApplicationReleaseArtifact: {
+      pk: { type: String, value: 'app#${applicationId}' },
+      sk: { type: String, value: 'appRelArt#${id}' },
+      applicationId: { type: String, required: true },
+      id: { type: String, uuid: true, validate: Match.ulid },
+      path: { type: String, required: true },
+      // a temp modelling technique to show selective access to chromosomes
+      // if present space separated list of allowed chromosomes
+      chromosomes: { type: String },
+    },
   },
 };

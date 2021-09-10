@@ -36,7 +36,7 @@ export class VisaController {
 
         console.log(`Looking for approved datasets for subject ${subjectId}`);
 
-        for (const d of await applicationServiceInstance.findApprovedDatasetsInvolvedAsApplicant(subjectId)) visaAssertions.push(`c:${d}`);
+        for (const d of await applicationServiceInstance.findApprovedApplicationsInvolvedAsApplicant(subjectId)) visaAssertions.push(`c:${d}`);
 
         // only if we actually find some datasets should we bother making a visa
         if (visaAssertions.length > 0) {
@@ -98,35 +98,3 @@ export class VisaController {
   };
 }
 
-/*
-wellKnownRouter.get(`/passport`, async (req, res, next) => {
-  const payload = {
-    sub: 'me',
-    scope: 'ga4gh offline',
-    jti: 'adsasdadadasd',
-    ga4gh: {
-      vn: '1.0',
-      iss: {
-        'https://didact-patto.dev.umccr.org': [makeVisaSigned(keyDefinitions, 'c:12345 r.p:#r1', 'patto-kid1')],
-      },
-    },
-  };
-
-  const { publicKey, privateKey } = await generateKeyPair('PS256');
-
-  const encoder = new TextEncoder();
-
-  const sign = new GeneralSign(encoder.encode(JSON.stringify(payload)));
-
-  //sign
-  //    .addSignature(ecPrivateKey)
-  //    .setProtectedHeader({ alg: 'ES256' })
-
-  sign.addSignature(privateKey).setProtectedHeader({ alg: 'PS256' });
-
-  const jws = await sign.sign();
-
-  res.status(200).json(jws);
-});
-
- */
