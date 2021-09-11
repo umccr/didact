@@ -3,6 +3,13 @@
 A prototype website playing the role of a data access committee
 in a theoretical genomic data sharing federation.
 
+{% note %}
+
+**Note:** Owners and administrators can add outside collaborators to a repository.
+
+{% endnote %}
+
+
 ## Development
 
 It is possible to do all dev locally with only AWS access needed by the backend for data
