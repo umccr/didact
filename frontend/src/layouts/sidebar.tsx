@@ -58,6 +58,9 @@ export const Sidebar: React.FC = ({ children }) => {
         <CustomSidebarLink to="/p/applications" activeOnlyWhenExact={false}>
           Applications
         </CustomSidebarLink>
+        <CustomSidebarLink to="/p/bioinformatics" activeOnlyWhenExact={false}>
+          Bioinformatics
+        </CustomSidebarLink>
       </nav>
     </aside>
   );

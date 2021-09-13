@@ -16,6 +16,7 @@ export type UserLoggedIn = {
   loggedIn: boolean;
   userId: string;
   userDisplayName: string;
+  userBearerToken: string;
 };
 
 const defaultValue = {
@@ -23,6 +24,7 @@ const defaultValue = {
   loggedIn: false,
   userId: "not logged in user id",
   userDisplayName: "not logged in",
+  userBearerToken: "no bearer token",
 };
 
 export const UserLoggedInContext = React.createContext<UserLoggedIn>(
@@ -51,6 +53,7 @@ export const UserLoggedInProvider = (props: any) => {
           loggedIn: true,
           userId: authState.idToken?.claims["sub"] || "no subject",
           userDisplayName: authState.idToken?.claims["name"] || "no name claim",
+          userBearerToken: authState.accessToken?.accessToken || "no bearer token"
         }
       : defaultValue;
 

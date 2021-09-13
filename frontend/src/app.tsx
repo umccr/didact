@@ -13,6 +13,7 @@ import { UserLoggedInProvider } from "./providers/user-logged-in-provider";
 import { ApplicationEditPage } from "./pages/application-edit";
 import { useEnvRelay } from "./providers/env-relay-provider";
 import { NoPKCELoginCallback } from "./components/no-pkce-login-callback";
+import { BioinformaticsPage } from "./pages/bioinformatics";
 
 function NoMatch() {
   let location = useLocation();
@@ -114,6 +115,7 @@ export const App: React.FC = () => {
               render={({ match: { url } }) => (
                 <Switch>
                   <Route path={`${url}/datasets`} component={DatasetsPage} />
+                  <Route path={`${url}/bioinformatics`} component={BioinformaticsPage} />
                   <Route
                     path={`${url}/applications`}
                     component={ApplicationsPage}

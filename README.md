@@ -3,17 +3,6 @@
 A prototype website playing the role of a data access committee
 in a theoretical genomic data sharing federation.
 
-> **Warning:** This is how you write a note.
->
-> It can have multiple lines.
-
-
-## Development
-
-> This is how you write a note.
->
-> It can have multiple lines.
-
 It is possible to do all dev locally with only AWS access needed by the backend for data
 operations (DynamoDb etc).
 
