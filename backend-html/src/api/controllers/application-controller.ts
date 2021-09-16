@@ -89,31 +89,39 @@ export class ApplicationController {
     try {
       const applicationId = req.params.applicationId;
 
-      const manifest: ReleaseManifestApiModel = {
-        id: applicationId,
-        htsgetUrl: 'https://htsget.dev.umccr.org',
-        htsgetArtifacts: {},
-      };
+      const application = await applicationServiceInstance.asApplication(applicationId);
 
-      for (const a of await applicationServiceInstance.getApplicationReleaseArtifacts(applicationId)) {
-        const rule: ReleaseManifestArtifactApiModel = {
-          sampleId: a.sampleId,
+      // TBD: check the permissions of the application
+      // if the application is not approved then return Not found as the manifest does not yet exist
+      if (application === null || application.state != 'approved') {
+        res.sendStatus(404);
+      } else {
+        const manifest: ReleaseManifestApiModel = {
+          id: applicationId,
+          htsgetUrl: 'https://htsget.dev.umccr.org',
+          htsgetArtifacts: {},
         };
 
-        if (a.chromosomes && a.chromosomes.length > 0) {
-          // for the moment we make each chromosome into a different region rule
-          // (only supports chromosome level rules TBD gene rules)
-          rule.restrictToRegions = a.chromosomes.map(c => {
-            return {
-              chromosome: c,
-            };
-          });
+        for (const a of await applicationServiceInstance.getApplicationReleaseArtifacts(applicationId)) {
+          const rule: ReleaseManifestArtifactApiModel = {
+            sampleId: a.sampleId,
+          };
+
+          if (a.chromosomes && a.chromosomes.length > 0) {
+            // for the moment we make each chromosome into a different region rule
+            // (only supports chromosome level rules TBD gene rules)
+            rule.restrictToRegions = a.chromosomes.map(c => {
+              return {
+                chromosome: c,
+              };
+            });
+          }
+
+          manifest.htsgetArtifacts[a.path] = rule;
         }
 
-        manifest.htsgetArtifacts[a.path] = rule;
+        res.status(200).json(manifest);
       }
-
-      res.status(200).json(manifest);
     } catch (error) {
       next(error);
     }

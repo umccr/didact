@@ -17,7 +17,7 @@ export type ReleaseArtifactModel = {
 };
 
 class ApplicationService {
-  private table: Table;
+  private readonly table: Table;
 
   constructor() {
     const client = new Dynamo({
@@ -81,10 +81,18 @@ class ApplicationService {
     return results;
   }
 
-  public async asApplication(applicationId: string): Promise<ApplicationApiModel> {
+  /**
+   * For the given application id return the complete API model consisting of
+   * nested events etc. If application is not found returns null.
+   *
+   * @param applicationId
+   */
+  public async asApplication(applicationId: string): Promise<ApplicationApiModel | null> {
     const { ApplicationDbModel, ApplicationEventDbModel } = getTypes(this.table);
 
     const theApp = await ApplicationDbModel.get({ id: applicationId });
+
+    if (!theApp) return null;
 
     const theAppResult: ApplicationApiModel = {
       id: theApp.id,
@@ -97,7 +105,7 @@ class ApplicationService {
       applicantDisplayName: PERSON_NAMES[theApp.applicantId],
       principalInvestigatorId: theApp.principalInvestigatorId,
       principalInvestigatorDisplayName: PERSON_NAMES[theApp.principalInvestigatorId],
-      // note: both of these data states is invalid - they *will* be replaced with
+      // note: both of these data states is invalid in the API - they *will* be replaced with
       // a proper lastUpdated data and at least one event - or we will throw an exception later
       lastUpdated: '',
       events: [],
