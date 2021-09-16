@@ -48,6 +48,11 @@ export class WebsiteApiGateway extends Construct {
       name: this.fqdn,
       protocolType: "HTTP",
       target: props.targetDefault.functionArn,
+      corsConfiguration: {
+        allowOrigins: ["*"],
+        allowMethods: ["GET"],
+        allowHeaders: ["*"]
+      }
     });
 
     // register a custom domain to overlay the api gw chosen endpoint

@@ -2,14 +2,19 @@
 export type ReleaseManifestApiModel = {
     id: string;
     htsgetUrl: string;
-    artifacts: { [htsgetId: string]: ReleaseManifestRuleApiModel; }
+    htsgetArtifacts: { [htsgetPath: string]: ReleaseManifestArtifactApiModel; }
 };
 
-export type ReleaseManifestRuleApiModel = {
-    chromosomes_only?: string[];
+export type ReleaseManifestArtifactApiModel = {
+    sampleId: string;
+    restrictToRegions?: ReleaseManifestRuleSpecificApiModel[];
 }
 
-export type ReleaseArtifactApiModel = {
-    path: string;
-    chromosomes?: string[];
+type ReleaseManifestRuleSpecificApiModel = {
+    chromosome: string;
+    // ensemblGeneIds?: string[];
 }
+
+
+
+

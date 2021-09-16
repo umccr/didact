@@ -1,4 +1,4 @@
-import { CfnParameter, RemovalPolicy } from "aws-cdk-lib";
+import { CfnParameter, Duration, RemovalPolicy } from "aws-cdk-lib";
 import { Vpc } from "aws-cdk-lib/aws-ec2";
 import {
   AttributeType,
@@ -78,6 +78,7 @@ export class DidactWebSite extends Construct {
       lambdaRepoNameParam: props.lambdaRepoNameParam.valueAsString,
       lambdaRepoTag: props.build,
       environmentVariables: envs,
+      duration: Duration.minutes(1)
     });
 
     /*const albConstruct = new MultiTargetLoadBalancer(this, "LoadBalancer", {

@@ -9,7 +9,12 @@ import { getTable } from '../db/didact-table-utils';
 import { getTypes } from '../db/didact-table-types';
 import { ApplicationApiModel } from '../../../../shared-src/api-models/application';
 import { PERSON_NAMES } from '../../testing/setup-test-data';
-import { ReleaseArtifactApiModel } from '../../../../shared-src/api-models/release';
+
+export type ReleaseArtifactModel = {
+  sampleId: string;
+  path: string;
+  chromosomes?: string[];
+};
 
 class ApplicationService {
   private table: Table;
@@ -215,10 +220,15 @@ class ApplicationService {
     return this.asApplication(applicationId);
   }
 
-  public async getApplicationReleaseArtifacts(applicationId: string): Promise<ReleaseArtifactApiModel[]> {
+  /**
+   * Return a list of all the artifacts that are allowed as part of application.
+   *
+   * @param applicationId
+   */
+  public async getApplicationReleaseArtifacts(applicationId: string): Promise<ReleaseArtifactModel[]> {
     const { ApplicationReleaseArtifactDbModel } = getTypes(this.table);
 
-    const artifactsSorted: ReleaseArtifactApiModel[] = [];
+    const artifactsSorted: ReleaseArtifactModel[] = [];
     {
       let aeNext: any = null;
       let aeItemPage: Paged<any[]>;
@@ -227,6 +237,7 @@ class ApplicationService {
 
         for (const item of aeItemPage.values()) {
           artifactsSorted.push({
+            sampleId: item.sampleId,
             path: item.path,
             chromosomes: item.chromosomes ? item.chromosomes.split(' ') : [],
           });

@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { applicationServiceInstance } from '../../business/services/application.service';
 import { ApplicationApiModel } from '../../../../shared-src/api-models/application';
-import { ReleaseManifestApiModel, ReleaseManifestRuleApiModel } from '../../../../shared-src/api-models/release';
+import { ReleaseManifestApiModel, ReleaseManifestArtifactApiModel } from '../../../../shared-src/api-models/release';
 import { getAuthUser } from './_controller.utils';
 
 /**
@@ -89,19 +89,31 @@ export class ApplicationController {
     try {
       const applicationId = req.params.applicationId;
 
-      const results: ReleaseManifestApiModel = {
+      const manifest: ReleaseManifestApiModel = {
         id: applicationId,
         htsgetUrl: 'https://htsget.dev.umccr.org',
-        artifacts: {},
+        htsgetArtifacts: {},
       };
 
       for (const a of await applicationServiceInstance.getApplicationReleaseArtifacts(applicationId)) {
-        const rule: ReleaseManifestRuleApiModel = {};
-        rule.chromosomes_only = a.chromosomes;
-        results.artifacts[a.path] = rule;
+        const rule: ReleaseManifestArtifactApiModel = {
+          sampleId: a.sampleId,
+        };
+
+        if (a.chromosomes && a.chromosomes.length > 0) {
+          // for the moment we make each chromosome into a different region rule
+          // (only supports chromosome level rules TBD gene rules)
+          rule.restrictToRegions = a.chromosomes.map(c => {
+            return {
+              chromosome: c,
+            };
+          });
+        }
+
+        manifest.htsgetArtifacts[a.path] = rule;
       }
 
-      res.status(200).json(results);
+      res.status(200).json(manifest);
     } catch (error) {
       next(error);
     }

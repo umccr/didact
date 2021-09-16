@@ -97,6 +97,7 @@ export const DidactTableSchema = {
       sk: { type: String, value: 'appRelArt#${id}' },
       applicationId: { type: String, required: true },
       id: { type: String, uuid: true, validate: Match.ulid },
+      sampleId: { type: String, required: true },
       path: { type: String, required: true },
       // a temp modelling technique to show selective access to chromosomes
       // if present space separated list of allowed chromosomes

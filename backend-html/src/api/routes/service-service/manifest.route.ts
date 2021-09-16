@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { IRoute } from '../_routes.interface';
 import { ApplicationController } from '../../controllers/application-controller';
+import cors from 'cors';
 
 export class ManifestRoute implements IRoute {
   public path = '/manifest';
@@ -12,6 +13,6 @@ export class ManifestRoute implements IRoute {
   }
 
   private initializeRoutes() {
-    this.router.get(`${this.path}/:applicationId`, this.applicationController.getReleaseManifest);
+    this.router.get(`${this.path}/:applicationId`, cors(), this.applicationController.getReleaseManifest);
   }
 }

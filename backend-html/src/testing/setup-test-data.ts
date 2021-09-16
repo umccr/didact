@@ -169,21 +169,25 @@ export async function setupTestData(canDestroyExistingData: boolean) {
     // querying gen3 etc)
     await ApplicationReleaseArtifactDbModel.create({
       applicationId: app10g.id,
+      sampleId: 'HG00096',
       path: 'reads/10g/https/HG00096',
     });
     await ApplicationReleaseArtifactDbModel.create({
       applicationId: app10g.id,
+      sampleId: 'HG00096',
       path: 'variants/10g/https/HG00096',
     });
     await ApplicationReleaseArtifactDbModel.create({
       applicationId: app10g.id,
+      sampleId: 'HG00097',
       path: 'variants/10g/https/HG00097',
       chromosomes: 'chr1 chr2 chr3',
     });
     await ApplicationReleaseArtifactDbModel.create({
       applicationId: app10g.id,
+      sampleId: 'HG00099',
       path: 'variants/10g/https/HG00099',
-      chromosomes: 'chr11 chr12',
+      chromosomes: 'chr1 chr11 chr12',
     });
   }
 
