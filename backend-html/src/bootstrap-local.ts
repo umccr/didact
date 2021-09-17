@@ -1,7 +1,6 @@
 import { setupTestData } from './testing/setup-test-data';
-import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
-import { BrokerRoute } from "./api/routes/public/broker-router";
-import { App } from "./app";
+import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
+import { App } from './app';
 
 // the development node bootstrap entrypoint
 // this entrypoint is used for running the backend locally on a dev machine - but must
@@ -35,6 +34,7 @@ setupTestData(true).then(async () => {
   process.env['LOGIN_CLIENT_ID'] = secretJson.client_id;
   process.env['LOGIN_CLIENT_SECRET'] = secretJson.client_secret;
   process.env['LDAP_HOST'] = 'ldaps://ldap-test.cilogon.org';
+  process.env['LDAP_USER'] = 'uid=readonly_user,ou=system,o=NAGIMdev,o=CO,dc=biocommons,dc=org,dc=au';
   process.env['LDAP_SECRET'] = secretJson.ldap_password;
 
   console.log('Creating Express app');

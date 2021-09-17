@@ -13,7 +13,6 @@ import { UserLoggedInProvider } from "./providers/user-logged-in-provider";
 import { ApplicationEditPage } from "./pages/application-edit";
 import { useEnvRelay } from "./providers/env-relay-provider";
 import { NoPKCELoginCallback } from "./components/no-pkce-login-callback";
-import { BioinformaticsPage } from "./pages/bioinformatics";
 
 function NoMatch() {
   let location = useLocation();
@@ -46,6 +45,13 @@ export const App: React.FC = () => {
     scopes: ["openid", "email", "profile"],
     redirectUri: window.location.origin + "/login/callback",
     devMode: true,
+    tokenManager: {
+      autoRenew: false,
+      syncStorage: false,
+      autoRemove: true,
+      storageKey: 'didact-token-storage',
+      storage: 'sessionStorage'
+    }
   };
 
   if (loginHost.includes("cilogon")) {
@@ -115,7 +121,6 @@ export const App: React.FC = () => {
               render={({ match: { url } }) => (
                 <Switch>
                   <Route path={`${url}/datasets`} component={DatasetsPage} />
-                  <Route path={`${url}/bioinformatics`} component={BioinformaticsPage} />
                   <Route
                     path={`${url}/applications`}
                     component={ApplicationsPage}

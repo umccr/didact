@@ -1,10 +1,10 @@
 import React, { useContext } from "react";
 import { LayoutStandardPage } from "../layouts/layout-standard-page";
 import { useQuery } from "react-query";
-import axios from "axios";
 import { DatasetApiModel } from "../../../shared-src/api-models/dataset";
 import { DataUseTable } from "../components/data-use-table";
 import { UserLoggedInContext } from "../providers/user-logged-in-provider";
+import { ClipLoader } from "react-spinners";
 
 type DatasetDivProps = {
   dataset: DatasetApiModel;
@@ -18,9 +18,7 @@ const DatasetDiv: React.FC<DatasetDivProps> = ({ dataset }) => {
         <span className="text-lg leading-6 font-medium text-gray-900">
           {dataset.name}
         </span>
-        <span className="max-w-2xl text-sm text-gray-500">
-          {dataset.id}
-        </span>
+        <span className="max-w-2xl text-sm text-gray-500">{dataset.id}</span>
       </div>
       {/*body*/}
       <div className="bg-gray-50 border-t border-gray-200">
@@ -32,7 +30,9 @@ const DatasetDiv: React.FC<DatasetDivProps> = ({ dataset }) => {
             </dd>
           </div>
           <div className="sm:grid sm:grid-cols-6">
-            <dt className="text-sm font-medium text-gray-500">DAC Responsible</dt>
+            <dt className="text-sm font-medium text-gray-500">
+              DAC Responsible
+            </dt>
             <dd className="text-sm text-gray-900 sm:mt-0 sm:col-span-5">
               {dataset.committeeDisplayName}
             </dd>
@@ -54,14 +54,12 @@ const DatasetDiv: React.FC<DatasetDivProps> = ({ dataset }) => {
 };
 
 export const DatasetsPage: React.FC = () => {
-  const { createAxiosInstance, userId } = useContext(UserLoggedInContext);
+  const { createAxiosInstance } = useContext(UserLoggedInContext);
 
   const { isLoading, isError, data, error } = useQuery("ds", async () => {
-    const data = await createAxiosInstance()
+    return await createAxiosInstance()
       .get<DatasetApiModel[]>(`/api/dataset`)
       .then((response) => response.data);
-
-    return data;
   });
 
   return (
@@ -69,8 +67,18 @@ export const DatasetsPage: React.FC = () => {
       pageTitle="Datasets"
       includeResearcherCommitteeChoice={false}
     >
-      <div className="space-y-4">
+      <div className="container space-y-4">
+        {isLoading && (
+          <div>
+            <ClipLoader />
+          </div>
+        )}
         {data && data.map((a, index) => <DatasetDiv dataset={a} key={index} />)}
+        {isError && (
+          <div>
+            <pre>{JSON.stringify(error, null, 2)}</pre>
+          </div>
+        )}
       </div>
     </LayoutStandardPage>
   );

@@ -26,7 +26,8 @@ import { ApplicationRoute } from './api/routes/protected/application.route';
 import { VisaRoute } from './api/routes/service-service/visa.route';
 import { ManifestRoute } from './api/routes/service-service/manifest.route';
 import { BrokerRoute } from './api/routes/public/broker-router';
-import { createJwksCallback } from "./api/routes/_routes.utils";
+import { createJwksCallback } from './api/routes/_routes.utils';
+import { UserRoute } from './api/routes/protected/user.route';
 
 export class App {
   public app: express.Application;
@@ -83,7 +84,7 @@ export class App {
     this.initializeServiceServiceRoutes([new VisaRoute(), new ManifestRoute()]);
     // this has to be last because it seems to alter all the api registrations
     // (TBD work out why.. probably should read the app.use() docs)
-    this.initializeSecuredRoutes([new DatasetRoute(secretCallback), new ApplicationRoute(secretCallback)]);
+    this.initializeSecuredRoutes([new DatasetRoute(secretCallback), new ApplicationRoute(secretCallback), new UserRoute(null)]);
 
     // we cannot directly use the standard static file middleware for express
     // because we have a behaviour for index.html that is heavily customised

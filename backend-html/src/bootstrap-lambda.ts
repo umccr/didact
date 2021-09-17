@@ -1,6 +1,5 @@
 import lambdaRequestHandler from 'lambda-request-handler';
-import { setupTestData } from './testing/setup-test-data';
-import { App } from "./app";
+import { App } from './app';
 
 /**
  * A one off initialisation async that can be used to set up the environment with

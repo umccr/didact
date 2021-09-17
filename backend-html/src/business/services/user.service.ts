@@ -1,7 +1,6 @@
 /**
- * The release service provides business layer functionality around
- * releases (a release is a set/subset of a dataset's files as approved
- * at a particular point of time).
+ * The user service provides a layer between the canonical list of
+ * users of the system as held in CILogon.
  */
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import Dynamo from 'dynamodb-onetable/Dynamo';
@@ -9,8 +8,12 @@ import { Paged, Table } from 'dynamodb-onetable';
 import { getTable } from '../db/didact-table-utils';
 import { DatasetDbType, getTypes } from '../db/didact-table-types';
 import { DatasetApiModel } from '../../../../shared-src/api-models/dataset';
+import { UserResearcherApiModel } from '../../../../shared-src/api-models/user-researcher';
 
-class ReleaseService {
+import { getMandatoryEnv } from '../../app-env';
+import { ldapClientPromise, ldapSearchPromise } from './_ldap.utils';
+
+class UserService {
   private readonly table: Table;
 
   constructor() {
@@ -42,8 +45,15 @@ class ReleaseService {
     return this.itemToDataset(ds);
   }
 
-  public async list(): Promise<DatasetApiModel[]> {
-    const { DatasetDbModel } = getTypes(this.table);
+  public async listResearchers(): Promise<UserResearcherApiModel[]> {
+    const client = await ldapClientPromise();
+    const x = await ldapSearchPromise(client, 'o=NAGIMdev,o=CO,dc=biocommons,dc=org,dc=au', {
+      filter: '&(objectClass=voPerson)(isMemberOf=didact:dac)',
+      scope: 'sub',
+      attributes: ['voPersonID', 'cn', 'isMemberOf'],
+    });
+
+    /*const { DatasetDbModel } = getTypes(this.table);
 
     const results: DatasetApiModel[] = [];
 
@@ -62,8 +72,9 @@ class ReleaseService {
       next = itemPage.next;
     } while (itemPage.next);
 
-    return results;
+    return results; */
+    return x;
   }
 }
 
-export const releaseServiceInstance = new ReleaseService();
+export const userServiceInstance = new UserService();

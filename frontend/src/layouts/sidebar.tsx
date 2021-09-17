@@ -37,7 +37,7 @@ const CustomSidebarLink: React.FC<Props> = ({
 
 export const Sidebar: React.FC = ({ children }) => {
   return (
-    <aside className="relative bg-blue-300 h-screen w-64 hidden sm:block shadow-xl">
+    <aside className="relative bg-blue-300 h-screen w-64 sm:block shadow-xl">
       <div className="p-6">
         <Link
           to="/"
@@ -57,9 +57,6 @@ export const Sidebar: React.FC = ({ children }) => {
         </CustomSidebarLink>
         <CustomSidebarLink to="/p/applications" activeOnlyWhenExact={false}>
           Applications
-        </CustomSidebarLink>
-        <CustomSidebarLink to="/p/bioinformatics" activeOnlyWhenExact={false}>
-          Bioinformatics
         </CustomSidebarLink>
       </nav>
     </aside>

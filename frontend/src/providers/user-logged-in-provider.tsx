@@ -2,14 +2,6 @@ import React from "react";
 import axios, { AxiosInstance } from "axios";
 import { useOktaAuth } from "@okta/okta-react";
 
-/**
- * NOTE: this list needs to be kept up to date with that set up in backend setup-tests.
- * In reality this will be driven by an actual identity provider.
- */
-const masterNagims: { [id: string]: string } = {
-  "https://nagim.dev/p/wjaha-ppqrg-10000": "Andrew P",
-};
-
 export type UserLoggedIn = {
   createAxiosInstance: () => AxiosInstance;
 

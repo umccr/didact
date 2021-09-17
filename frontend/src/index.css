@@ -5,6 +5,9 @@
 .btn {
     @apply font-bold py-2 px-4 rounded;
 }
+.btn-small {
+    @apply font-bold py-1 px-2 rounded text-sm;
+}
 .btn-blue {
     @apply bg-blue-500 text-white;
 }

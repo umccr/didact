@@ -15,7 +15,8 @@ export const UserModeContext = React.createContext<UserMode>({
 });
 
 /**
- * The user mode provider
+ * A state provider for the site that allows the user to choose between
+ * being a researcher or a committee member
  *
  * @param props
  * @constructor
@@ -24,11 +25,9 @@ export const UserModeProvider = (props: any) => {
   const [mode, setMode] = useState<UserModeType>("researcher");
 
   const setResearcher = () => {
-    console.log("Set researcher");
     setMode("researcher");
   };
   const setCommittee = () => {
-    console.log("Set committee");
     setMode("committee");
   };
 

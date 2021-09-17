@@ -1,15 +1,11 @@
 import React from "react";
-import { useEnvRelay } from "../providers/env-relay-provider";
-import {LayoutBase} from "../layouts/layout-base";
-import { LayoutStandardPage } from "../layouts/layout-standard-page";
-import {LayoutNoAuthPage} from "../layouts/layout-noauth-page";
-import {useHistory} from "react-router-dom";
-import {OktaAuth} from "@okta/okta-auth-js";
+import { LayoutNoAuthPage } from "../layouts/layout-noauth-page";
+import { OktaAuth } from "@okta/okta-auth-js";
 import classnames from "classnames";
 
 type Props = {
-  oktaAuth: OktaAuth
-}
+  oktaAuth: OktaAuth;
+};
 
 export const LoginPage: React.FC<Props> = ({oktaAuth}) => {
 

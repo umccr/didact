@@ -20,7 +20,7 @@ export const ApplicationEditPage: React.FC = () => {
 
   const queryClient = useQueryClient();
 
-  const { createAxiosInstance, userId } = React.useContext(
+  const { createAxiosInstance } = React.useContext(
     UserLoggedInContext
   );
 
@@ -290,14 +290,3 @@ export const ApplicationEditPage: React.FC = () => {
     </LayoutStandardPage>
   );
 };
-
-{
-  /*
-       <div className="hidden sm:block" aria-hidden="true">
-        <div className="py-5">
-          <div className="border-t border-gray-200"/>
-        </div>
-      </div>
-
- */
-}

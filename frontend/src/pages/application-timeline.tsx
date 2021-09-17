@@ -2,13 +2,18 @@ import React from "react";
 import { LayoutStandardPage } from "../layouts/layout-standard-page";
 import { useParams } from "react-router-dom";
 import { useQuery } from "react-query";
-import axios from "axios";
-import { ApplicationApiModel, ApplicationEventApiModel } from "../../../shared-src/api-models/application";
+import {
+  ApplicationApiModel,
+  ApplicationEventApiModel,
+} from "../../../shared-src/api-models/application";
 import classnames from "classnames";
+import { UserLoggedInContext } from "../providers/user-logged-in-provider";
+import { ClipLoader } from "react-spinners";
+import { ApplicationSummaryDiv } from "./application-summary-div";
 
 type TimelineEntryProps = {
   event: ApplicationEventApiModel;
-}
+};
 
 const TimelineEntry: React.FC<TimelineEntryProps> = ({ event }) => {
   const overallDivClasses = classnames(
@@ -47,14 +52,16 @@ const TimelineEntry: React.FC<TimelineEntryProps> = ({ event }) => {
 export const ApplicationTimelinePage: React.FC = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
 
+  const { createAxiosInstance } = React.useContext(
+    UserLoggedInContext
+  );
+
   const { isLoading, isError, data, error } = useQuery(
     ["application-timeline", applicationId],
     async ({ queryKey }) => {
-      const data = await axios
+      return await createAxiosInstance()
         .get<ApplicationApiModel>(`/api/application/${queryKey[1]}`)
         .then((response) => response.data);
-
-      return data;
     }
   );
 
@@ -63,11 +70,17 @@ export const ApplicationTimelinePage: React.FC = () => {
       pageTitle="Application Timeline"
       includeResearcherCommitteeChoice={false}
     >
+      <div className="container space-y-4">
+      {isLoading && (
+        <div>
+          <ClipLoader />
+        </div>
+      )}
+
       {data && (
-        <div className="container mx-auto w-full">
-          <h1>{data.projectTitle}</h1>
-          <h2>{data.state}</h2>
-          <h3>{data.datasetId}</h3>
+        <div className="w-full">
+          <ApplicationSummaryDiv showFooter={false} application={data} />
+
           <div className="hidden sm:block" aria-hidden="true">
             <div className="py-5">
               <div className="border-t border-gray-200" />
@@ -101,6 +114,7 @@ export const ApplicationTimelinePage: React.FC = () => {
           <pre>{JSON.stringify(error)}</pre>
         </div>
       )}
+      </div>
     </LayoutStandardPage>
   );
 };

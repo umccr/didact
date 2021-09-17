@@ -13,7 +13,7 @@ import { useHistory } from "react-router-dom";
 export const ApplicationNewPage: React.FC = () => {
   const { push } = useHistory();
 
-  const { createAxiosInstance, userId } = React.useContext(
+  const { createAxiosInstance, userId, userDisplayName } = React.useContext(
     UserLoggedInContext
   );
 
@@ -68,7 +68,9 @@ export const ApplicationNewPage: React.FC = () => {
                         Applicant
                       </label>
                       <div className="mt-1 flex rounded-md shadow-sm">
-                        <span>{userId}</span>
+                        <span>
+                          {userDisplayName} ({userId})
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -87,9 +89,23 @@ export const ApplicationNewPage: React.FC = () => {
                           id="principal-investigator-id"
                           {...register("principalInvestigatorId")}
                         >
-                          {['a', 'b'].map((u, index) => (
-                            <option key={index} value={u}>
-                              {u}
+                          {/* TODO: replace with sourcing this from LDAP/backend */}
+                          {[
+                            {
+                              id: "https://nagim.dev/p/kfuus-aodnv-10000",
+                              displayName: "Andrew GmailPatterson",
+                            },
+                            {
+                              id: "https://nagim.dev/p/txtpo-yhphm-10000",
+                              displayName: "Andrew PattoPatterson",
+                            },
+                            {
+                              id: "https://nagim.dev/p/wjaha-ppqrg-10000",
+                              displayName: "Andrew UniMelbPatterson",
+                            },
+                          ].map((u, index) => (
+                            <option key={index} value={u.id}>
+                              {u.displayName} ({u.id})
                             </option>
                           ))}
                         </select>
@@ -110,7 +126,7 @@ export const ApplicationNewPage: React.FC = () => {
                         Dataset Id
                       </label>
                       <div className="mt-1 flex rounded-md shadow-sm">
-                        {/* not this should be coming from some db driven data fetched at start of session */}
+                        {/* TODO: replace with sourcing this from backend */}
                         <select id="data-set-id" {...register("datasetId")}>
                           <option value="urn:fdc:australiangenomics.org.au:2018:study/1">
                             Mitochondrial Flagship
@@ -120,6 +136,9 @@ export const ApplicationNewPage: React.FC = () => {
                           </option>
                           <option value="urn:fdc:australiangenomics.org.au:2018:study/3">
                             Cancer Flagship
+                          </option>
+                          <option value="urn:fdc:thetengenomeproject.org:2018:phase1">
+                            10g Project
                           </option>
                         </select>
                       </div>

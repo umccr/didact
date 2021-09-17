@@ -11,7 +11,8 @@ export type AppEnvName =
   | "LOGIN_CLIENT_ID"
   | "LOGIN_CLIENT_SECRET"
   | "LDAP_HOST"
-  | "LDAP_PASSWORD"
+  | "LDAP_USER"
+  | "LDAP_SECRET"
   | "SEMANTIC_VERSION"
   | "BUILD_VERSION"
   | "NODE_ENV";
