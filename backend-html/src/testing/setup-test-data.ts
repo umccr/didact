@@ -33,7 +33,7 @@ async function deleteAll(t: Table): Promise<void> {
   // exceedingly destructively remove all existing items.. we should make some way that this only
   // works on dev accounts on dev tables
   let next: any = null;
-  let itemPage: Paged<AnyEntity[]>;
+  let itemPage: Paged<AnyEntity>;
   do {
     itemPage = await t.scanItems({}, { next, limit: 25 });
 
@@ -67,6 +67,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
 
   const {
     DatasetDbModel,
+    DatasetSubjectDbModel,
     CommitteeDbModel,
     CommitteeMemberDbModel,
     ApplicationDbModel,
@@ -99,7 +100,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
 
     await CommitteeMemberDbModel.create({
       committeeId: c2.id,
-      personId: PERSON_ANDREW_UNI,
+      personId: PERSON_ANDREW_GMAIL,
       role: 'administrator',
     });
 
@@ -141,6 +142,58 @@ export async function setupTestData(canDestroyExistingData: boolean) {
         },
       ],
     });
+
+    await DatasetSubjectDbModel.create({
+      datasetId: ds10g.id,
+      subjectId: 'SINGLETONA',
+      sampleIds: new Set(['HG00096']) as any,
+    });
+
+    await DatasetSubjectDbModel.create({
+      datasetId: ds10g.id,
+      subjectId: 'SINGLETONB',
+      sampleIds: new Set(['HG00097']) as any,
+    });
+
+    await DatasetSubjectDbModel.create({
+      datasetId: ds10g.id,
+      subjectId: 'SINGLETONC',
+      sampleIds: new Set(['HG00099']) as any,
+    });
+
+    await DatasetSubjectDbModel.create({
+      datasetId: ds10g.id,
+      subjectId: 'SOMATICA',
+      sampleIds: new Set(['HG00100-TBD', 'HG00101-TBD']) as any,
+    });
+
+    await DatasetSubjectDbModel.create({
+      datasetId: ds10g.id,
+      subjectId: 'SOMATICB',
+      sampleIds: new Set(['HG00099']) as any,
+    });
+
+    await DatasetSubjectDbModel.create({
+      datasetId: ds10g.id,
+      familyId: 'SIMPSONS',
+      subjectId: 'TRIOHOMER',
+      sampleIds: new Set(['HG00102-TBD']) as any,
+    });
+
+    await DatasetSubjectDbModel.create({
+      datasetId: ds10g.id,
+      familyId: 'SIMPSONS',
+      subjectId: 'TRIOMARGE',
+      sampleIds: new Set(['HG00103-TBD']) as any,
+    });
+
+    await DatasetSubjectDbModel.create({
+      datasetId: ds10g.id,
+      familyId: 'SIMPSONS',
+      subjectId: 'TRIOBART',
+      sampleIds: new Set(['HG00104-TBD']) as any,
+    });
+
 
     const app10g = await ApplicationDbModel.create({
       id: '8XZF4195109CIIERC35P577HAM',

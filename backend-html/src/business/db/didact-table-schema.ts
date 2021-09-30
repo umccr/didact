@@ -1,6 +1,7 @@
 const Match = {
   urn: /^urn:[a-z0-9][a-z0-9-]{0,31}:[a-z0-9()+,\-.:=@;$_!*'%/?#]+$/i,
   ulid: /^[0-9A-Z]{26}$/i,
+  identifier: /^[A-Za-z0-9\-\\.]{1,64}$/,
   name: /^[a-z0-9 ,.'-]+$/i,
   address: /[a-z0-9 ,.-]+$/,
   zip: /^\d{5}(?:[-\s]\d{4})?$/,
@@ -27,6 +28,14 @@ export const DidactTableSchema = {
       // index dataset.committeeId -> dataset.id
       gs1pk: { type: String, value: 'ds#${committeeId}' },
       gs1sk: { type: String, value: 'ds#${id}' },
+    },
+    DatasetSubject: {
+      pk: { type: String, value: 'ds#${datasetId}' },
+      sk: { type: String, value: 'dsSub#${subjectId}' },
+      datasetId: { type: String, required: true },
+      subjectId: { type: String, required: true, validate: Match.identifier },
+      familyId: { type: String, validate: Match.identifier },
+      sampleIds: { type: Set },
     },
     Committee: {
       pk: { type: String, value: 'committee#${id}' },

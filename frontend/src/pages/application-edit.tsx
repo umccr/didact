@@ -279,6 +279,7 @@ export const ApplicationEditPage: React.FC = () => {
                   applicationId={applicationData.id}
                   applicationState={applicationData.state}
                   dataUses={datasetData.dataUses}
+                  subjects={datasetData.subjects!}
                   snomed={snomedSelected}
                   hgnc={hgncSelected}
                 />

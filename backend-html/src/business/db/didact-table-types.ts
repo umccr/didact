@@ -2,6 +2,7 @@ import { Entity, Table } from 'dynamodb-onetable';
 import { DidactTableSchema } from './didact-table-schema';
 
 export type DatasetDbType = Entity<typeof DidactTableSchema.models.Dataset>;
+export type DatasetSubjectDbType = Entity<typeof DidactTableSchema.models.DatasetSubject>;
 export type CommitteeDbType = Entity<typeof DidactTableSchema.models.Committee>;
 export type CommitteeMemberDbType = Entity<typeof DidactTableSchema.models.CommitteeMember>;
 export type ApplicationDbType = Entity<typeof DidactTableSchema.models.Application>;
@@ -16,6 +17,7 @@ export type ApplicationReleaseArtifactDbType = Entity<typeof DidactTableSchema.m
  */
 export function getTypes(table: Table) {
   const DatasetDbModel = table.getModel<DatasetDbType>('Dataset');
+  const DatasetSubjectDbModel = table.getModel<DatasetSubjectDbType>('DatasetSubject');
   const CommitteeDbModel = table.getModel<CommitteeDbType>('Committee');
   const CommitteeMemberDbModel = table.getModel<CommitteeMemberDbType>('CommitteeMember');
   const ApplicationDbModel = table.getModel<ApplicationDbType>('Application');
@@ -24,6 +26,7 @@ export function getTypes(table: Table) {
 
   return {
     DatasetDbModel,
+    DatasetSubjectDbModel,
     CommitteeDbModel,
     CommitteeMemberDbModel,
     ApplicationDbModel,

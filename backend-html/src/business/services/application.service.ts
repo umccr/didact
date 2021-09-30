@@ -4,9 +4,9 @@
  */
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import Dynamo from 'dynamodb-onetable/Dynamo';
-import { Paged, Table } from 'dynamodb-onetable';
+import { AnyEntity, Paged, Table } from "dynamodb-onetable";
 import { getTable } from '../db/didact-table-utils';
-import { getTypes } from '../db/didact-table-types';
+import { ApplicationEventDbType, ApplicationReleaseArtifactDbType, getTypes } from "../db/didact-table-types";
 import { ApplicationApiModel } from '../../../../shared-src/api-models/application';
 import { PERSON_NAMES } from '../../testing/setup-test-data';
 
@@ -114,11 +114,11 @@ class ApplicationService {
     const eventsSorted = [];
     {
       let aeNext: any = null;
-      let aeItemPage: Paged<any[]>;
+      let aeItemPage: Paged<ApplicationEventDbType>;
       do {
         aeItemPage = await ApplicationEventDbModel.find({ applicationId: applicationId });
 
-        for (const item of aeItemPage.values()) {
+        for (const item of aeItemPage) {
           eventsSorted.push({
             when: item.when.toJSON(),
             byId: item.byId,
@@ -239,11 +239,11 @@ class ApplicationService {
     const artifactsSorted: ReleaseArtifactModel[] = [];
     {
       let aeNext: any = null;
-      let aeItemPage: Paged<any[]>;
+      let aeItemPage: Paged<ApplicationReleaseArtifactDbType>;
       do {
         aeItemPage = await ApplicationReleaseArtifactDbModel.find({ applicationId: applicationId });
 
-        for (const item of aeItemPage.values()) {
+        for (const item of aeItemPage) {
           artifactsSorted.push({
             sampleId: item.sampleId,
             path: item.path,

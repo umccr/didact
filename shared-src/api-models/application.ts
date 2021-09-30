@@ -1,5 +1,7 @@
 
 export type ApplicationApiNewModel = {
+    // NOTE: applicant id (implicit based on bearer token on /new API call)
+
     // the official PI of the study - may or may not be the applicant
     principalInvestigatorId: string,
 

@@ -1,5 +1,5 @@
 import cookieParser from 'cookie-parser';
-import express, { NextFunction, Request, Response, Router } from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import hpp from 'hpp';
 import morgan from 'morgan';
@@ -9,15 +9,12 @@ import { errorMiddleware } from './middlewares/error.middleware';
 import path from 'path';
 import * as fs from 'fs';
 import parseUrl from 'parseurl';
-import { URL, URLSearchParams } from 'url';
+import { URLSearchParams } from 'url';
 import * as _ from 'lodash';
 import cryptoRandomString from 'crypto-random-string';
-import got from 'got';
 import { AppEnvName } from '../../shared-src/app-env-name';
 import { getMandatoryEnv } from './app-env';
 import { resetRouter } from './api/routes/reset-router';
-import { expressJwtSecret } from 'jwks-rsa';
-import jwt from 'express-jwt';
 import { OpenIdRoute } from './api/routes/public/openid-router';
 import { WellKnownRoute } from './api/routes/public/well-known-router';
 import { VisaTestRoute } from './api/routes/visatest.route';
@@ -26,8 +23,9 @@ import { ApplicationRoute } from './api/routes/protected/application.route';
 import { VisaRoute } from './api/routes/service-service/visa.route';
 import { ManifestRoute } from './api/routes/service-service/manifest.route';
 import { BrokerRoute } from './api/routes/public/broker-router';
-import { createJwksCallback } from './api/routes/_routes.utils';
 import { UserRoute } from './api/routes/protected/user.route';
+import { ReferenceDataRoute } from './api/routes/protected/reference-data.route';
+import { createJwksCallback } from './api/routes/_routes.utils';
 
 export class App {
   public app: express.Application;
@@ -84,7 +82,12 @@ export class App {
     this.initializeServiceServiceRoutes([new VisaRoute(), new ManifestRoute()]);
     // this has to be last because it seems to alter all the api registrations
     // (TBD work out why.. probably should read the app.use() docs)
-    this.initializeSecuredRoutes([new DatasetRoute(secretCallback), new ApplicationRoute(secretCallback), new UserRoute(null)]);
+    this.initializeSecuredRoutes([
+      new DatasetRoute(secretCallback),
+      new ApplicationRoute(secretCallback),
+      new UserRoute(null),
+      new ReferenceDataRoute(null),
+    ]);
 
     // we cannot directly use the standard static file middleware for express
     // because we have a behaviour for index.html that is heavily customised

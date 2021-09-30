@@ -7,4 +7,11 @@ export type DatasetApiModel = {
     committeeId: string;
     committeeDisplayName: string;
     dataUses: DataUseLimitation[];
+    // if explicitly asked for, dataset can also include details of all the subjects/samples contained within
+    subjects?: { [id: string]: DatasetApiSubjectModel };
 };
+
+export type DatasetApiSubjectModel = {
+    sampleIds: string[];
+    familyId?: string;
+}

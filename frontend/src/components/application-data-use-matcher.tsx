@@ -4,13 +4,19 @@ import React, { useState } from "react";
 import classnames from "classnames";
 import axios from "axios";
 import { APPLICATION_EDIT_QUERY_NAME } from "../pages/application-edit";
-import { useQueryClient } from "react-query";
+import { useQuery, useQueryClient } from "react-query";
 import { UserLoggedInContext } from "../providers/user-logged-in-provider";
 import { DataUseTable } from "./data-use-table";
+import { DatasetApiSubjectModel } from "../../../shared-src/api-models/dataset";
+import { SubjectsTable } from "./subjects-table";
+import { ApplicationApiModel } from "../../../shared-src/api-models/application";
+import { PanelappPanelApiModel } from "../../../shared-src/api-models/panelapp-panel";
 
 type Props = {
   applicationId: string;
   applicationState: string;
+
+  subjects: { [id: string]: DatasetApiSubjectModel }
 
   snomed: { [id: string]: Concept };
   hgnc: { [id: string]: Concept };
@@ -25,6 +31,7 @@ type Evaluation = {
 export const ApplicationDataUseMatcher: React.FC<Props> = ({
   applicationId,
   applicationState,
+  subjects,
   snomed,
   hgnc,
   dataUses,
@@ -32,6 +39,16 @@ export const ApplicationDataUseMatcher: React.FC<Props> = ({
   const queryClient = useQueryClient();
 
   const { createAxiosInstance } = React.useContext(UserLoggedInContext);
+
+  const { data: panelappData } = useQuery<PanelappPanelApiModel[]>(
+    "panelapp",
+    async () => {
+      return await createAxiosInstance()
+        .get<PanelappPanelApiModel[]>(`/api/reference-data/panels`)
+        .then((response) => response.data);
+    }
+  );
+
 
   const approveClick = async () => {
     const apiResponse = await createAxiosInstance()
@@ -57,6 +74,8 @@ export const ApplicationDataUseMatcher: React.FC<Props> = ({
 
   const approveDisabled = ["started", "approved"].includes(applicationState);
   const unapproveDisabled = ["submitted", "started"].includes(applicationState);
+
+  const [subjectsSelected, setSubjectsSelected] = useState<Set<string>>(new Set([]));
 
   const [evaluateState, setEvaluateState] = useState<Evaluation[]>([]);
 
@@ -106,15 +125,15 @@ export const ApplicationDataUseMatcher: React.FC<Props> = ({
         <label className="block text-sm font-medium text-gray-700">
           Committee Use Only
         </label>
+      </div>
+
+      <div className="px-4 py-5 bg-white space-y-6 sm:p-6">
         <button
           onClick={evaluateClick}
           className={classnames("btn", "btn-blue")}
         >
           Evaluate
         </button>
-      </div>
-
-      <div className="px-4 py-5 bg-white space-y-6 sm:p-6">
         <div className="grid grid-cols-2 gap-6">
           {dataUses.map((du, index) => (
             <>
@@ -128,6 +147,28 @@ export const ApplicationDataUseMatcher: React.FC<Props> = ({
               </div>
             </>
           ))}
+        </div>
+        <div className="grid grid-cols-1 gap-6">
+          <div>
+            <SubjectsTable subjects={subjects} selected={subjectsSelected} setSelected={setSubjectsSelected} />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-6">
+          <div>
+            <p>Restrict by gene</p>
+          </div>
+          <div>
+            <p>Restrict by panel</p>
+            <select
+              id="panels"
+            >
+              {panelappData && panelappData.map((p, index) => (
+                <option key={index} value={p.id}>
+                  {p.name} {p.version}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
