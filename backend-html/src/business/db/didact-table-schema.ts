@@ -69,10 +69,22 @@ export const DidactTableSchema = {
       principalInvestigatorId: { type: String, required: true },
       datasetId: { type: String, required: true },
       projectTitle: { type: String, required: true },
+      // a controlled state machine
       state: { type: String, enum: ['started', 'submitted', 'approved', 'rejected'], required: true },
       // fields that can be edited during application process
       researchUseStatement: { type: String, required: false },
       nonTechnicalStatement: { type: String, required: false },
+      snomed: { type: Set },
+      hgnc: { type: Set },
+      // fields recorded when a release is approved
+      htsgetEndpoint: { type: String, required: false },
+      readsEnabled: { type: Boolean, required: false },
+      variantsEnabled: { type: Boolean, required: false },
+      fhirEndpoint: { type: String, required: false },
+      phenotypesEnabled: { type: Boolean, required: false },
+      panelappId: { type: Number, required: false },
+      panelappVersion: { type: String, required: false },
+      panelappMinConfidence: { type: Number, required: false },
 
       // indexes - we need to be able to lookup applications by
       // applicantId
@@ -101,16 +113,14 @@ export const DidactTableSchema = {
       gs1pk: { type: String, value: 'appEv#${byId}' },
       gs1sk: { type: String, value: 'app#${applicationId}' },
     },
-    ApplicationReleaseArtifact: {
+    ApplicationReleaseSubject: {
       pk: { type: String, value: 'app#${applicationId}' },
-      sk: { type: String, value: 'appRelArt#${id}' },
+      sk: { type: String, value: 'appReleaseSubject#${subjectId}' },
       applicationId: { type: String, required: true },
-      id: { type: String, uuid: true, validate: Match.ulid },
-      sampleId: { type: String, required: true },
-      path: { type: String, required: true },
-      // a temp modelling technique to show selective access to chromosomes
-      // if present space separated list of allowed chromosomes
-      chromosomes: { type: String },
+      subjectId: { type: String, required: true },
+      sampleIds: { type: Array, required: true },
+
+      // no indexes needed for the release artifacts as they
     },
   },
 };

@@ -7,7 +7,7 @@ export type CommitteeDbType = Entity<typeof DidactTableSchema.models.Committee>;
 export type CommitteeMemberDbType = Entity<typeof DidactTableSchema.models.CommitteeMember>;
 export type ApplicationDbType = Entity<typeof DidactTableSchema.models.Application>;
 export type ApplicationEventDbType = Entity<typeof DidactTableSchema.models.ApplicationEvent>;
-export type ApplicationReleaseArtifactDbType = Entity<typeof DidactTableSchema.models.ApplicationReleaseArtifact>;
+export type ApplicationReleaseSubjectDbType = Entity<typeof DidactTableSchema.models.ApplicationReleaseSubject>;
 
 /**
  * Return a model type object that represents a Typescript friendly version
@@ -22,7 +22,7 @@ export function getTypes(table: Table) {
   const CommitteeMemberDbModel = table.getModel<CommitteeMemberDbType>('CommitteeMember');
   const ApplicationDbModel = table.getModel<ApplicationDbType>('Application');
   const ApplicationEventDbModel = table.getModel<ApplicationEventDbType>('ApplicationEvent');
-  const ApplicationReleaseArtifactDbModel = table.getModel<ApplicationReleaseArtifactDbType>('ApplicationReleaseArtifact');
+  const ApplicationReleaseSubjectDbModel = table.getModel<ApplicationReleaseSubjectDbType>('ApplicationReleaseSubject');
 
   return {
     DatasetDbModel,
@@ -31,6 +31,6 @@ export function getTypes(table: Table) {
     CommitteeMemberDbModel,
     ApplicationDbModel,
     ApplicationEventDbModel,
-    ApplicationReleaseArtifactDbModel,
+    ApplicationReleaseSubjectDbModel,
   };
 }

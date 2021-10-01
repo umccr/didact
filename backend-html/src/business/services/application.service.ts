@@ -4,9 +4,9 @@
  */
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import Dynamo from 'dynamodb-onetable/Dynamo';
-import { AnyEntity, Paged, Table } from "dynamodb-onetable";
+import { AnyEntity, Paged, Table } from 'dynamodb-onetable';
 import { getTable } from '../db/didact-table-utils';
-import { ApplicationEventDbType, ApplicationReleaseArtifactDbType, getTypes } from "../db/didact-table-types";
+import { ApplicationEventDbType, ApplicationReleaseSubjectDbType, getTypes } from '../db/didact-table-types';
 import { ApplicationApiModel } from '../../../../shared-src/api-models/application';
 import { PERSON_NAMES } from '../../testing/setup-test-data';
 
@@ -105,7 +105,9 @@ class ApplicationService {
       applicantDisplayName: PERSON_NAMES[theApp.applicantId],
       principalInvestigatorId: theApp.principalInvestigatorId,
       principalInvestigatorDisplayName: PERSON_NAMES[theApp.principalInvestigatorId],
-      // note: both of these data states is invalid in the API - they *will* be replaced with
+      snomed: Array.from((theApp.snomed as any) || []),
+      hgnc: Array.from((theApp.hgnc as any) || []),
+      // note: these data states are invalid in the API - they *will* be replaced with
       // a proper lastUpdated data and at least one event - or we will throw an exception later
       lastUpdated: '',
       events: [],
@@ -137,6 +139,27 @@ class ApplicationService {
       throw new Error(`Application ${applicationId} was found in the db with no associated events (not even a creation event)`);
 
     eventsSorted.sort((a, b) => a.when.localeCompare(b.when));
+
+    if (theAppResult.state === 'approved') {
+      const dbSubjects = await this.getApplicationReleaseSubjects(applicationId);
+      theAppResult.release = {
+        readsEnabled: theApp.readsEnabled,
+        variantsEnabled: theApp.variantsEnabled,
+        phenotypesEnabled: theApp.phenotypesEnabled,
+        panelappId: theApp.panelappId.toString(),
+        panelappVersion: theApp.panelappVersion,
+        panelappDisplayName: 'TBD',
+        htsgetEndpoint: theApp.htsgetEndpoint,
+        fhirEndpoint: theApp.fhirEndpoint,
+        subjects: [],
+      };
+      theAppResult.release.subjects = dbSubjects.map(rs => {
+        return {
+          subjectId: rs.subjectId,
+          sampleIds: rs.sampleIds,
+        };
+      });
+    }
 
     theAppResult.lastUpdated = eventsSorted[0].when;
     theAppResult.events = eventsSorted;
@@ -229,35 +252,31 @@ class ApplicationService {
   }
 
   /**
-   * Return a list of all the artifacts that are allowed as part of application.
+   * Return a list of all the subjects/samples attached to a release application.
    *
    * @param applicationId
    */
-  public async getApplicationReleaseArtifacts(applicationId: string): Promise<ReleaseArtifactModel[]> {
-    const { ApplicationReleaseArtifactDbModel } = getTypes(this.table);
+  public async getApplicationReleaseSubjects(applicationId: string): Promise<ApplicationReleaseSubjectDbType[]> {
+    const { ApplicationReleaseSubjectDbModel } = getTypes(this.table);
 
-    const artifactsSorted: ReleaseArtifactModel[] = [];
+    const sorted: ApplicationReleaseSubjectDbType[] = [];
     {
       let aeNext: any = null;
-      let aeItemPage: Paged<ApplicationReleaseArtifactDbType>;
+      let aeItemPage: Paged<ApplicationReleaseSubjectDbType>;
       do {
-        aeItemPage = await ApplicationReleaseArtifactDbModel.find({ applicationId: applicationId });
+        aeItemPage = await ApplicationReleaseSubjectDbModel.find({ applicationId: applicationId });
 
         for (const item of aeItemPage) {
-          artifactsSorted.push({
-            sampleId: item.sampleId,
-            path: item.path,
-            chromosomes: item.chromosomes ? item.chromosomes.split(' ') : [],
-          });
+          sorted.push(item);
         }
 
         aeNext = aeItemPage.next;
       } while (aeNext);
     }
 
-    artifactsSorted.sort((a, b) => a.path.localeCompare(b.path));
+    sorted.sort((a, b) => a.subjectId.localeCompare(b.subjectId));
 
-    return artifactsSorted;
+    return sorted;
   }
 
   /**

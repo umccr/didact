@@ -1,41 +1,23 @@
-import { Concept } from "./concept";
-import React, { Dispatch, useState } from "react";
+import { Concept, ConceptDictionary } from "./concept-chooser-types";
+import React, { Dispatch } from "react";
 import { ConceptChooser } from "./concept-chooser";
-import _ from "lodash";
+import { addToSelected, removeFromSelected } from "./concept-chooser-utils";
 
 type Props = {
   // the dictionary of currently selected concepts to be held in suitable state somewhere else
-  selected: { [id: string]: Concept };
+  selected: ConceptDictionary;
 
-  setSelected: Dispatch<React.SetStateAction<{ [id: string]: Concept }>>
+  // the action to mutate concept state
+  setSelected: Dispatch<React.SetStateAction<ConceptDictionary>>
+
+  disabled: boolean;
 };
 
 /**
  * @param props
  * @constructor
  */
-export const HgncChooser: React.FC<Props> = ({ selected, setSelected }) => {
-  const addToHgncSelected = (id: string, concept: Concept) => {
-    const permanentConcept = _.cloneDeep(concept);
-
-    // our search process adds in some extra data to the concepts - which whilst not a massive problem - we
-    // look to clean up before saving into the backend form data
-    delete (permanentConcept as any)["hilighted"];
-    delete (permanentConcept as any)["score"];
-
-    setSelected((oldSelectedValue) => ({
-      ...oldSelectedValue,
-      [permanentConcept.id]: permanentConcept,
-    }));
-  };
-
-  const removeFromHgncSelected = (id: string) => {
-    const newSelected = { ...selected };
-    if (id in newSelected) delete newSelected[id];
-
-    setSelected(newSelected);
-  };
-
+export const HgncChooser: React.FC<Props> = ({ selected, setSelected, disabled }) => {
   return (
     <ConceptChooser
       ontoServerUrl="https://genomics.ontoserver.csiro.au/fhir"
@@ -46,8 +28,9 @@ export const HgncChooser: React.FC<Props> = ({ selected, setSelected }) => {
       placeholder="e.g. SHOX2, AATF"
       codePrefix="HGNC"
       selected={selected}
-      addToSelected={addToHgncSelected}
-      removeFromSelected={removeFromHgncSelected}
+      disabled={disabled}
+      addToSelected={(a,b) => addToSelected(setSelected, a, b)}
+      removeFromSelected={(a) => removeFromSelected(setSelected, a)}
     />
   );
 };

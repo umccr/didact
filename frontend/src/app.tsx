@@ -10,7 +10,7 @@ import { ApplicationNewPage } from "./pages/application-new";
 import { ApplicationTimelinePage } from "./pages/application-timeline";
 import { UserModeProvider } from "./providers/user-mode-provider";
 import { UserLoggedInProvider } from "./providers/user-logged-in-provider";
-import { ApplicationEditPage } from "./pages/application-edit";
+import { ApplicationEditPage } from "./pages/application-edit/application-edit";
 import { useEnvRelay } from "./providers/env-relay-provider";
 import { NoPKCELoginCallback } from "./components/no-pkce-login-callback";
 

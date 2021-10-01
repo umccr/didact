@@ -105,7 +105,6 @@ class DatasetService {
     if (subjects != null) {
       result.subjects = {};
       for (const s of subjects) {
-        console.log(s);
         result.subjects[s.subjectId] = {
           sampleIds: Array.from(s.sampleIds),
         };

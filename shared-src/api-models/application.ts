@@ -21,16 +21,41 @@ export type ApplicationApiModel = ApplicationApiNewModel & {
 
     principalInvestigatorDisplayName: string,
 
+    state: string,
+
     researchUseStatement: string,
     nonTechnicalStatement: string,
 
-    state: string,
+    // these are actually represented in other places as either Set of codes, or a dictionary keyed by
+    // code - but for the purposes of API exchange we do them just as an array of codes
+    snomed: string[];
+    hgnc: string[];
 
     // date of last update of *any* part of this application in UTC ISO format
     lastUpdated: string;
 
     events: ApplicationEventApiModel[];
+
+    // when (and only when) the state == "approved" for release, these fields
+    // will contain details of the release
+    release?: ApplicationReleaseApiModel
 };
+
+export type ApplicationReleaseApiModel = {
+    htsgetEndpoint?: string;
+    readsEnabled: boolean;
+    variantsEnabled: boolean;
+
+    fhirEndpoint?: string;
+    phenotypesEnabled: boolean;
+
+    panelappId?: string;
+    panelappVersion?: string;
+    panelappDisplayName?: string;
+    panelappMinConfidence?: number;
+
+    subjects: ApplicationReleaseSubjectApiModel[];
+}
 
 export type ApplicationEventApiModel = {
     when: string;
@@ -39,4 +64,9 @@ export type ApplicationEventApiModel = {
     byName: string;
     as: string;
     detail: string;
+}
+
+export type ApplicationReleaseSubjectApiModel = {
+    subjectId: string;
+    sampleIds: string[];
 }

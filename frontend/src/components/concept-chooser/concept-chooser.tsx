@@ -3,7 +3,7 @@ import { useCombobox } from "downshift";
 import axios from "axios";
 import classNames from "classnames";
 import _ from "lodash";
-import { Concept } from "./concept";
+import { Concept, ConceptDictionary } from "./concept-chooser-types";
 
 type Props = {
   ontoServerUrl: string; // "https://genomics.ontoserver.csiro.au
@@ -12,15 +12,17 @@ type Props = {
   systemVersion: string; // "20191108"
   rootConceptId: string; // "HP:0000118"
 
+  disabled: boolean;
+
   label: string;
   codePrefix: string;
   placeholder: string;
 
   // the dictionary of currently selected concepts
-  selected: { [id: string]: Concept };
+  selected: ConceptDictionary;
 
+  // the actions to change the dictionary of selected concepts
   addToSelected(id: string, concept: Concept): void;
-
   removeFromSelected(id: string): void;
 };
 
@@ -153,129 +155,125 @@ export const ConceptChooser: React.FC<Props> = (props: Props) => {
 
   return (
     <>
-      <div className="grid grid-cols-6 gap-x-6">
-        <div className="col-span-6">
-          <label
-            {...getLabelProps()}
-            className="block text-sm font-medium text-gray-700"
-          >
-            {props.label}
-          </label>
-        </div>
-        <div className="col-span-6 sm:col-span-3">
-          <div>
-            <div className="mt-1 relative rounded-md shadow-sm">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <span className="text-gray-500 sm:text-sm">
-                  {props.codePrefix}
-                </span>
-              </div>
-              <input
-                type="text"
-                {...getInputProps({
-                  placeholder: props.placeholder,
-                })}
-                className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-28 pr-12 sm:text-sm border-gray-300 rounded-md"
-              />
+      <div>
+        <label
+          {...getLabelProps()}
+          className="block text-sm font-medium text-gray-700"
+        >
+          {props.label}
+        </label>
+      </div>
+
+      <div>
+        <div className="relative">
+          <div className="mt-1 relative rounded-md">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <span className="text-gray-500 text-lg">
+                {props.codePrefix}
+              </span>
             </div>
-            {/* if the input element is open, render the div else render nothing*/}
-            {isOpen && searchHits && searchHits.length > 0 && (
-              <div
-                className="absolute z-10 mt-2 w-96 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none"
-                role="menu"
-                aria-orientation="vertical"
-                aria-labelledby="menu-button"
-                tabIndex={-1}
-                {...getMenuProps()}
-              >
-                <div className="py-1" role="none">
-                  {searchHits.slice(0, 10).map((item: any, index: number) => {
-                    const itemProps = getItemProps({
-                      key: index,
-                      index,
-                      item,
-                    });
+            <input
+              type="text"
+              {...getInputProps({
+                placeholder: props.placeholder,
+                disabled: props.disabled,
+              })}
+              className="focus:ring-indigo-500 focus:border-indigo-500 block w-3/4 pl-28 pr-12 text-lg border-gray-300 rounded-md"
+            />
+          </div>
+          {/* if the input element is open, render the div else render nothing*/}
+          {isOpen && searchHits && searchHits.length > 0 && (
+            <div
+              className="origin-top-left absolute z-10 mt-1 w-96 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none"
+              role="menu"
+              aria-orientation="vertical"
+              aria-labelledby="menu-button"
+              tabIndex={-1}
+              {...getMenuProps()}
+            >
+              <div className="py-1" role="none">
+                {searchHits.slice(0, 10).map((item: any, index: number) => {
+                  const itemProps = getItemProps({
+                    key: index,
+                    index,
+                    item,
+                  });
 
-                    const classn = classNames(
-                      {
-                        "bg-gray-100": highlightedIndex === index,
-                        "text-gray-900": highlightedIndex === index,
-                        "text-gray-700": highlightedIndex !== index,
-                      },
-                      "block",
-                      "px-4",
-                      "py-2",
-                      "text-sm"
-                    );
+                  const classn = classNames(
+                    {
+                      "bg-gray-100": highlightedIndex === index,
+                      "text-gray-900": highlightedIndex === index,
+                      "text-gray-700": highlightedIndex !== index,
+                    },
+                    "block",
+                    "px-4",
+                    "py-2",
+                    "text-sm"
+                  );
 
-                    return (
-                      <div
-                        className={classn}
-                        role="menuitem"
-                        tabIndex={-1}
-                        key={itemProps.key}
-                        {...itemProps}
-                      >
-                        <span className="mr-6" />
-                        {item.name}
-                      </div>
-                    );
-                  })}
-                  {searchHits.length > 10 && (
+                  return (
                     <div
-                      className="block px-4 py-2 text-sm"
+                      className={classn}
                       role="menuitem"
                       tabIndex={-1}
+                      key={itemProps.key}
+                      {...itemProps}
                     >
-                      ...
+                      <span className="mr-6" />
+                      {item.name}
                     </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="col-span-6 sm:col-span-3">
-          {!_.isEmpty(props.selected) && (
-            <div className="flex flex-col">
-              <div className="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-                <div className="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
-                  <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {Object.entries(props.selected).map(
-                          ([_, panel], index) => (
-                            <tr key={index}>
-                              <td className="px-4 py-2 whitespace-nowrap">
-                                <div className="flex items-center">
-                                  <div>
-                                    <div className="text-sm font-medium text-gray-900">
-                                      {panel.name}
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
-                                <button
-                                  className="hover:text-indigo-900 text-red-500"
-                                  onClick={() =>
-                                    props.removeFromSelected(panel.id)
-                                  }
-                                >
-                                  x
-                                </button>
-                              </td>
-                            </tr>
-                          )
-                        )}
-                      </tbody>
-                    </table>
+                  );
+                })}
+                {searchHits.length > 10 && (
+                  <div
+                    className="block px-4 py-2 text-sm"
+                    role="menuitem"
+                    tabIndex={-1}
+                  >
+                    ...
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}
         </div>
+      </div>
+      <div>
+        {!_.isEmpty(props.selected) && (
+          <div className="flex flex-col mt-4">
+            <div className="ml-8 -my-2 overflow-x-auto">
+              <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {Object.entries(props.selected).map(([_, panel], index) => (
+                      <tr key={index}>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div>
+                              <div className="text-sm  text-gray-900">
+                                {panel.name}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-right text-sm">
+                          {!props.disabled && (
+                            <button
+                              className="hover:text-indigo-900 text-red-500"
+                              onClick={() => props.removeFromSelected(panel.id)}
+                            >
+                              x
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

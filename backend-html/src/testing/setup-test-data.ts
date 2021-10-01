@@ -72,7 +72,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
     CommitteeMemberDbModel,
     ApplicationDbModel,
     ApplicationEventDbModel,
-    ApplicationReleaseArtifactDbModel,
+    ApplicationReleaseSubjectDbModel,
   } = getTypes(table);
 
   let c1;
@@ -137,25 +137,25 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       description: 'A subset of 10 subjects from the 1000g project',
       dataUses: [
         {
-          code: { id: 'DUO:0000006', label: 'HMB' },
-          modifiers: [],
+          code: { id: 'DUO:0000007', label: 'DS' },
+          disease: { id: 'SNOMED:32895009', label: 'Hereditary disease' },
         },
       ],
     });
 
-    await DatasetSubjectDbModel.create({
+    const mary = await DatasetSubjectDbModel.create({
       datasetId: ds10g.id,
-      subjectId: 'SINGLETONA',
+      subjectId: 'SINGLETONMARY',
       sampleIds: new Set(['HG00096']) as any,
     });
 
-    await DatasetSubjectDbModel.create({
+    const bruce = await DatasetSubjectDbModel.create({
       datasetId: ds10g.id,
       subjectId: 'SINGLETONB',
       sampleIds: new Set(['HG00097']) as any,
     });
 
-    await DatasetSubjectDbModel.create({
+    const scott = await DatasetSubjectDbModel.create({
       datasetId: ds10g.id,
       subjectId: 'SINGLETONC',
       sampleIds: new Set(['HG00099']) as any,
@@ -170,14 +170,14 @@ export async function setupTestData(canDestroyExistingData: boolean) {
     await DatasetSubjectDbModel.create({
       datasetId: ds10g.id,
       subjectId: 'SOMATICB',
-      sampleIds: new Set(['HG00099']) as any,
+      sampleIds: new Set(['HG000102-TBD']) as any,
     });
 
     await DatasetSubjectDbModel.create({
       datasetId: ds10g.id,
       familyId: 'SIMPSONS',
       subjectId: 'TRIOHOMER',
-      sampleIds: new Set(['HG00102-TBD']) as any,
+      sampleIds: new Set(['HG00105-TBD']) as any,
     });
 
     await DatasetSubjectDbModel.create({
@@ -194,54 +194,90 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       sampleIds: new Set(['HG00104-TBD']) as any,
     });
 
+    {
+      const app10g = await ApplicationDbModel.create({
+        id: '8XZF4195109CIIERC35P577HAM',
+        applicantId: PERSON_ANDREW_UNI,
+        principalInvestigatorId: PERSON_BOB,
+        datasetId: ds10g.id,
+        projectTitle: 'Selective Access to Variant Data',
+        researchUseStatement: 'Can we do it',
+        nonTechnicalStatement: 'Simpler',
+        snomed: new Set(['SNOMED:23423424']) as any,
+        hgnc: new Set(['HGNC:123']) as any,
+        state: 'approved',
+        readsEnabled: false,
+        variantsEnabled: true,
+        phenotypesEnabled: true,
+        fhirEndpoint: 'https://csiro.au/foo',
+        htsgetEndpoint: 'https://htsget.ap-southeast-2.dev.umccr.org',
+        panelappId: 111,
+        panelappVersion: '0.211',
+      });
 
-    const app10g = await ApplicationDbModel.create({
-      id: '8XZF4195109CIIERC35P577HAM',
-      applicantId: PERSON_ANDREW_UNI,
-      principalInvestigatorId: PERSON_BOB,
-      datasetId: ds10g.id,
-      projectTitle: 'Selective access to variant data',
-      researchUseStatement: 'Can we do it',
-      nonTechnicalStatement: 'Simpler',
-      state: 'approved',
-    });
+      await ApplicationEventDbModel.create({
+        applicationId: app10g.id,
+        action: 'create',
+        when: new Date(2021, 4, 13, 15, 44, 21),
+        byId: PERSON_ANDREW_UNI,
+        as: 'applicant',
+        detail: 'I filled in all the data',
+      });
 
-    await ApplicationEventDbModel.create({
-      applicationId: app10g.id,
-      action: 'create',
-      when: new Date(2021, 4, 13, 15, 44, 21),
-      byId: PERSON_ANDREW_UNI,
-      as: 'applicant',
-      detail: 'I filled in all the data',
-    });
+      // we should fill in more events here - but for demo purposes not needed
 
-    // we should fill in more events here - but for demo purposes not needed
+      // we put this application into an automatically approved state
+      // and include dataset details (that we would have built on approval by
+      // querying gen3 etc)
+      await ApplicationReleaseSubjectDbModel.create({
+        applicationId: app10g.id,
+        subjectId: mary.subjectId,
+        sampleIds: Array.from(mary.sampleIds),
+        // path: 'reads/10g/https/HG00096',
+      });
+      await ApplicationReleaseSubjectDbModel.create({
+        applicationId: app10g.id,
+        subjectId: scott.subjectId,
+        sampleIds: Array.from(scott.sampleIds),
+        //path: 'variants/10g/https/HG00097',
+        //chromosomes: 'chr1 chr2 chr3',
+      });
+      await ApplicationReleaseSubjectDbModel.create({
+        applicationId: app10g.id,
+        subjectId: bruce.subjectId,
+        sampleIds: Array.from(bruce.sampleIds),
+        //path: 'variants/10g/https/HG00099',
+        // chromosomes: 'chr1 chr11 chr12',
+      });
+    }
 
-    // we put this application into an automatically approved state
-    // and include dataset details (that we would have built on approval by
-    // querying gen3 etc)
-    await ApplicationReleaseArtifactDbModel.create({
-      applicationId: app10g.id,
-      sampleId: 'HG00096',
-      path: 'reads/10g/https/HG00096',
-    });
-    await ApplicationReleaseArtifactDbModel.create({
-      applicationId: app10g.id,
-      sampleId: 'HG00096',
-      path: 'variants/10g/https/HG00096',
-    });
-    await ApplicationReleaseArtifactDbModel.create({
-      applicationId: app10g.id,
-      sampleId: 'HG00097',
-      path: 'variants/10g/https/HG00097',
-      chromosomes: 'chr1 chr2 chr3',
-    });
-    await ApplicationReleaseArtifactDbModel.create({
-      applicationId: app10g.id,
-      sampleId: 'HG00099',
-      path: 'variants/10g/https/HG00099',
-      chromosomes: 'chr1 chr11 chr12',
-    });
+    {
+      const partialApp10g = await ApplicationDbModel.create({
+        id: '01FGX20E1919BZ3D09TP1MRQNR',
+        applicantId: PERSON_ANDREW_UNI,
+        principalInvestigatorId: PERSON_ANDREW_UNI,
+        datasetId: ds10g.id,
+        projectTitle: 'A Partial Application for 10G Data',
+        researchUseStatement: 'This application is for reseearch into ...',
+        nonTechnicalStatement: 'Simpler',
+        snomed: new Set([
+          '718212006' /*TMEM70 related mitochondrial encephalo-cardio-myopathy*/,
+          '126488004' /*cancer of skin*/,
+          '472315005' /* mitocondrial cardiomyopathy*/,
+        ]) as any,
+        hgnc: new Set(['HGNC:123']) as any,
+        state: 'started',
+      });
+
+      await ApplicationEventDbModel.create({
+        applicationId: partialApp10g.id,
+        action: 'create',
+        when: new Date(2021, 4, 13, 15, 44, 21),
+        byId: PERSON_ANDREW_UNI,
+        as: 'applicant',
+        detail: 'I filled in all the data',
+      });
+    }
   }
 
   {

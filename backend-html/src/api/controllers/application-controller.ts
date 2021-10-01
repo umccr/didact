@@ -102,12 +102,16 @@ export class ApplicationController {
           htsgetArtifacts: {},
         };
 
-        for (const a of await applicationServiceInstance.getApplicationReleaseArtifacts(applicationId)) {
-          const rule: ReleaseManifestArtifactApiModel = {
-            sampleId: a.sampleId,
-          };
+        for (const a of await applicationServiceInstance.getApplicationReleaseSubjects(applicationId)) {
+          for (const x of a.sampleIds) {
+            const rule: ReleaseManifestArtifactApiModel = {
+              sampleId: x,
+            };
 
-          if (a.chromosomes && a.chromosomes.length > 0) {
+            manifest.htsgetArtifacts[a.subjectId] = rule;
+          }
+
+          /*if (a.chromosomes && a.chromosomes.length > 0) {
             // for the moment we make each chromosome into a different region rule
             // (only supports chromosome level rules TBD gene rules)
             rule.restrictToRegions = a.chromosomes.map(c => {
@@ -115,9 +119,7 @@ export class ApplicationController {
                 chromosome: c,
               };
             });
-          }
-
-          manifest.htsgetArtifacts[a.path] = rule;
+          }*/
         }
 
         res.status(200).json(manifest);
