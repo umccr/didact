@@ -30,6 +30,15 @@ export interface StaticSiteProps {
   oidcLoginClientIdParam: CfnParameter;
   oidcLoginClientSecretParam: CfnParameter;
 
+  brokerCertificateArnParam: CfnParameter;
+  brokerNameHostParam: CfnParameter;
+  brokerNameDomainParam: CfnParameter;
+  brokerNameZoneIdParam: CfnParameter;
+
+  ldapHostParam: CfnParameter;
+  ldapUserParam: CfnParameter;
+  ldapSecretParam: CfnParameter;
+
   build: string;
 }
 
@@ -69,13 +78,15 @@ export class DidactWebSite extends Construct {
       LOGIN_HOST: props.oidcLoginHostParam.valueAsString,
       LOGIN_CLIENT_ID: props.oidcLoginClientIdParam.valueAsString,
       LOGIN_CLIENT_SECRET: props.oidcLoginClientSecretParam.valueAsString,
-      LDAP_HOST: "",
-      LDAP_PASSWORD: ""
+      LDAP_HOST: props.ldapHostParam.valueAsString,
+      LDAP_USER: props.ldapUserParam.valueAsString,
+      LDAP_SECRET: props.ldapSecretParam.valueAsString
     };
 
     const functionConstruct = new EcrBasedLambdaFunction(this, "HtmlFunction", {
       lambdaRole: htmlFunctionRole,
       lambdaRepoNameParam: props.lambdaRepoNameParam.valueAsString,
+      lambdaCmd:  [ "bootstrap-lambda.handler" ],
       lambdaRepoTag: props.build,
       environmentVariables: envs,
       duration: Duration.minutes(1)
@@ -98,6 +109,26 @@ export class DidactWebSite extends Construct {
       nameZoneId: props.albNameZoneIdParam.valueAsString,
       targetDefault: functionConstruct.function
     })
+
+    {
+      const brokerFunctionConstruct = new EcrBasedLambdaFunction(this, "BrokerFunction", {
+        lambdaRole: htmlFunctionRole,
+        lambdaRepoNameParam: props.lambdaRepoNameParam.valueAsString,
+        lambdaCmd:  [ "bootstrap-broker-lambda.handler" ],
+        lambdaRepoTag: props.build,
+        environmentVariables: envs,
+        duration: Duration.minutes(1)
+      });
+
+      const brokerApiGateway = new WebsiteApiGateway(this, "BrokerApiGateway", {
+        certificateArn: props.brokerCertificateArnParam.valueAsString,
+        nameHost: props.brokerNameHostParam.valueAsString,
+        nameDomain: props.brokerNameDomainParam.valueAsString,
+        nameZoneId: props.brokerNameZoneIdParam.valueAsString,
+        targetDefault: brokerFunctionConstruct.function
+      });
+    }
+
   }
 
   /**

@@ -1,14 +1,11 @@
 import { Construct } from "constructs";
-import { Certificate } from "aws-cdk-lib/aws-certificatemanager";
-import { CfnApi, CfnApiMapping, CfnDomainName } from "aws-cdk-lib/aws-apigatewayv2";
-import { Function } from "aws-cdk-lib/aws-lambda";
 import {
-  ARecord,
-  CnameRecord,
-  HostedZone,
-  RecordTarget,
-} from "aws-cdk-lib/aws-route53";
-import { ServicePrincipal } from "aws-cdk-lib/aws-iam";
+  CfnApi,
+  CfnApiMapping,
+  CfnDomainName,
+} from "aws-cdk-lib/aws-apigatewayv2";
+import { Function } from "aws-cdk-lib/aws-lambda";
+import { ARecord, HostedZone, RecordTarget } from "aws-cdk-lib/aws-route53";
 import { ApiGatewayv2DomainProperties } from "aws-cdk-lib/aws-route53-targets";
 
 export type MultiTargetLoadBalancerProps = {
@@ -50,7 +47,7 @@ export class WebsiteApiGateway extends Construct {
       target: props.targetDefault.functionArn,
       corsConfiguration: {
         allowOrigins: ["*"],
-        allowMethods: ["GET"],
+        allowMethods: ["GET", "PUT", "POST"],
         allowHeaders: ["*"]
       }
     });
@@ -71,26 +68,37 @@ export class WebsiteApiGateway extends Construct {
     // of the actual API creation
     dn.addDependsOn(this.apiGateway);
 
-    const mappings = new CfnApiMapping(this, "Mapping", {
-      apiId: this.apiGateway.ref,
-      domainName: dn.domainName,
-      stage: '$default',
-    });
-
     const albZone = HostedZone.fromHostedZoneAttributes(this, "AlbZone", {
       hostedZoneId: props.nameZoneId,
       zoneName: props.nameDomain,
     });
 
+    const recordTarget = RecordTarget.fromAlias(
+      new ApiGatewayv2DomainProperties(
+        dn.attrRegionalDomainName,
+        dn.attrRegionalHostedZoneId
+      )
+    );
+
     const albDns = new ARecord(this, "AlbAliasRecord", {
       zone: albZone,
       recordName: props.nameHost,
-      target: RecordTarget.fromAlias(
-        new ApiGatewayv2DomainProperties(
-          dn.attrRegionalDomainName,
-          dn.attrRegionalHostedZoneId
-        )
-      ),
+      target: recordTarget,
     });
+
+    // ok - the mapping always causes trouble - I think that is has an explict
+    // dependency already on apiGateway and dn - but we get random failures
+    // to create the stack
+    // WebBrokerApiGatewayMapping93BD2258	CREATE_FAILED	Invalid domain name identifier specified
+    // which is a classic example of the mapping being attempted before the
+    // domain name record is attached to the API gateway
+    // so anyhow, we explicitly mention the dependencies here..
+    const mappings = new CfnApiMapping(this, "Mapping", {
+      apiId: this.apiGateway.ref,
+      domainName: dn.domainName,
+      stage: '$default',
+    });
+    mappings.addDependsOn(this.apiGateway);
+    mappings.addDependsOn(dn);
   }
 }

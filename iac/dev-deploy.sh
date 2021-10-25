@@ -25,13 +25,18 @@ SUBC="subnet-093aee876a555f218"
 SUBNETS="$SUBA, $SUBB, $SUBC"
 AZS="ap-southeast-2a, ap-southeast-2b, ap-southeast-2c"
 ECRHTML="$SITE_NAME-html-dev"
-ECRAPI="$SITE_NAME-api-dev"
 DOMAIN="dev.umccr.org"
 AUSCERT="arn:aws:acm:ap-southeast-2:843407916570:certificate/aa9a1385-7f72-4f1f-98a5-a5da2eff653b"
 DOMAINZONE="Z13ZMZH3CGX773"
 OIDCHOST="https://cilogon.org"
 OIDCCLIENTID="{{resolve:secretsmanager:dev/didact/registry-test.biocommons.org.au:SecretString:client_id}}"
 OIDCCLIENTSECRET="{{resolve:secretsmanager:dev/didact/registry-test.biocommons.org.au:SecretString:client_secret}}"
+LDAPHOST="ldaps://ldap-test.cilogon.org"
+LDAPUSER="uid=readonly_user,ou=system,o=NAGIMdev,o=CO,dc=biocommons,dc=org,dc=au"
+LDAPSECRET="{{resolve:secretsmanager:dev/didact/registry-test.biocommons.org.au:SecretString:ldap_secret}}"
+BROKERAUSCERT="arn:aws:acm:ap-southeast-2:843407916570:certificate/ec89d6f9-5d50-438b-8bdd-b48f953aa1b3"
+BROKERDOMAIN="nagim.dev"
+BROKERDOMAINZONE="Z0321813PLMQECK916W2"
 
 # note - the use of --no-lookups - even though a dev stack *could* do lookups - because our
 # eventual CI built stack cannot do lookups - we want to disable it in dev as well
@@ -51,4 +56,11 @@ UMCCR_DEVELOPER=$1 npx cdk deploy \
    --parameters "AlbCertArn=$AUSCERT" \
    --parameters "AlbNameHost=$SITE_NAME-$1" \
    --parameters "AlbNameDomain=$DOMAIN" \
-   --parameters "AlbNameZoneId=$DOMAINZONE"
+   --parameters "AlbNameZoneId=$DOMAINZONE" \
+   --parameters "BrokerCertArn=$BROKERAUSCERT" \
+   --parameters "BrokerNameHost=broker" \
+   --parameters "BrokerNameDomain=$BROKERDOMAIN" \
+   --parameters "BrokerNameZoneId=$BROKERDOMAINZONE" \
+   --parameters "LdapHost=$LDAPHOST" \
+   --parameters "LdapUser=$LDAPUSER" \
+   --parameters "LdapSecret=$LDAPSECRET"

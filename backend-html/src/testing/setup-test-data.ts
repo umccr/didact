@@ -10,12 +10,14 @@ export const PERSON_BOB = 'https://nagim.dev/p/ertyu-asrqe-34526';
 export const PERSON_ALICE = 'https://nagim.dev/p/saqwfe-bvgfr-65987';
 export const PERSON_ANDREW_UNI = 'https://nagim.dev/p/wjaha-ppqrg-10000';
 export const PERSON_ANDREW_GMAIL = 'https://nagim.dev/p/kfuus-aodnv-10000';
+export const PERSON_DENIS_BAUER = 'https://nagim.dev/p/mbcxw-bpjwv-10000';
 
 export const PERSON_NAMES = {
   [PERSON_ANDREW_UNI]: 'Andrew Patterson Uni',
   [PERSON_ANDREW_GMAIL]: 'Andrew Patterson Gmail',
   [PERSON_ALICE]: 'Alice Smith',
   [PERSON_BOB]: 'Bob Wiseman',
+  [PERSON_DENIS_BAUER]: 'Denis Bauer',
 };
 
 async function anyData(t: Table): Promise<boolean> {
@@ -151,13 +153,13 @@ export async function setupTestData(canDestroyExistingData: boolean) {
 
     const bruce = await DatasetSubjectDbModel.create({
       datasetId: ds10g.id,
-      subjectId: 'SINGLETONB',
+      subjectId: 'SINGLETONBRUCE',
       sampleIds: new Set(['HG00097']) as any,
     });
 
     const scott = await DatasetSubjectDbModel.create({
       datasetId: ds10g.id,
-      subjectId: 'SINGLETONC',
+      subjectId: 'SINGLETONSCOTT',
       sampleIds: new Set(['HG00099']) as any,
     });
 
@@ -173,21 +175,21 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       sampleIds: new Set(['HG000102-TBD']) as any,
     });
 
-    await DatasetSubjectDbModel.create({
+    const homer = await DatasetSubjectDbModel.create({
       datasetId: ds10g.id,
       familyId: 'SIMPSONS',
       subjectId: 'TRIOHOMER',
       sampleIds: new Set(['HG00105-TBD']) as any,
     });
 
-    await DatasetSubjectDbModel.create({
+    const marge = await DatasetSubjectDbModel.create({
       datasetId: ds10g.id,
       familyId: 'SIMPSONS',
       subjectId: 'TRIOMARGE',
       sampleIds: new Set(['HG00103-TBD']) as any,
     });
 
-    await DatasetSubjectDbModel.create({
+    const bart = await DatasetSubjectDbModel.create({
       datasetId: ds10g.id,
       familyId: 'SIMPSONS',
       subjectId: 'TRIOBART',
@@ -276,6 +278,69 @@ export async function setupTestData(canDestroyExistingData: boolean) {
         byId: PERSON_ANDREW_UNI,
         as: 'applicant',
         detail: 'I filled in all the data',
+      });
+    }
+
+    // a CSIRO specific application
+    {
+      const app10g = await ApplicationDbModel.create({
+        id: '1AAC4S95109XIIERC35P577OOO',
+        applicantId: PERSON_DENIS_BAUER,
+        principalInvestigatorId: PERSON_DENIS_BAUER,
+        datasetId: ds10g.id,
+        projectTitle: 'An Examination of 10 Samples by CSIRO',
+        researchUseStatement: 'RUS',
+        nonTechnicalStatement: 'Simpler',
+        snomed: new Set(['SNOMED:23423424']) as any,
+        hgnc: new Set(['HGNC:123']) as any,
+        state: 'approved',
+        readsEnabled: false,
+        variantsEnabled: true,
+        phenotypesEnabled: true,
+        fhirEndpoint: 'https://csiro.au/tbd',
+        htsgetEndpoint: 'https://htsget.ap-southeast-2.dev.umccr.org',
+        panelappId: 111,
+        panelappVersion: '0.211',
+      });
+
+      await ApplicationEventDbModel.create({
+        applicationId: app10g.id,
+        action: 'create',
+        when: new Date(2021, 4, 13, 15, 44, 21),
+        byId: PERSON_DENIS_BAUER,
+        as: 'applicant',
+        detail: 'I filled in all the data',
+      });
+
+      // we should fill in more events here - but for demo purposes not needed
+
+      // we put this application into an automatically approved state
+      // and include dataset details (that we would have built on approval by
+      // querying gen3 etc)
+      await ApplicationReleaseSubjectDbModel.create({
+        applicationId: app10g.id,
+        subjectId: mary.subjectId,
+        sampleIds: Array.from(mary.sampleIds),
+      });
+      await ApplicationReleaseSubjectDbModel.create({
+        applicationId: app10g.id,
+        subjectId: scott.subjectId,
+        sampleIds: Array.from(scott.sampleIds),
+      });
+      await ApplicationReleaseSubjectDbModel.create({
+        applicationId: app10g.id,
+        subjectId: bruce.subjectId,
+        sampleIds: Array.from(bruce.sampleIds),
+      });
+      await ApplicationReleaseSubjectDbModel.create({
+        applicationId: app10g.id,
+        subjectId: bart.subjectId,
+        sampleIds: Array.from(bart.sampleIds),
+      });
+      await ApplicationReleaseSubjectDbModel.create({
+        applicationId: app10g.id,
+        subjectId: marge.subjectId,
+        sampleIds: Array.from(marge.sampleIds),
       });
     }
   }

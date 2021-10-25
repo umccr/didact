@@ -70,13 +70,16 @@ export const NoPKCELoginCallback: React.FC<LoginCallbackProps> = ({
       const now = Math.floor(Date.now() / 1000);
 
       if (accessToken) {
+        console.log("Access token from CILogon");
+        console.log(accessToken);
+
         // try exchanging this access token for a different one
         const passportExchange = await axios.post(
-          "/broker/exchange",
+          "https://broker.nagim.dev/broker/token",
           queryString.stringify({
             grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
             subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
-            requested_token_type: "urn:ga4gh:token-type:self-contained-passport",
+            requested_token_type: "urn:ga4gh:token-type:compact-passport",
             subject_token: accessToken,
           }),
           {

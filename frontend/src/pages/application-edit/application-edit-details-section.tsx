@@ -6,6 +6,7 @@ import { DatasetApiModel, DatasetApiSubjectModel } from "../../../../shared-src/
 import { DataUseLimitation } from "../../../../shared-src/api-models/data-use-limitation";
 import { ApplicationApiModel } from "../../../../shared-src/api-models/application";
 import { ConceptDictionary } from "../../components/concept-chooser/concept-chooser-types";
+import { LabelledContent } from "../../components/labelled-content";
 
 type Props = {
   applicationData: ApplicationApiModel;
@@ -47,6 +48,11 @@ export const ApplicationEditDetailsSection: React.FC<Props> = ({
             </div>
           </div>
 
+          <LabelledContent label="Title (PI)">
+            {applicationData.projectTitle} {applicationData.principalInvestigatorDisplayName}
+          </LabelledContent>
+
+          {/*
           <div>
             <label
               htmlFor="rus"
@@ -91,7 +97,7 @@ export const ApplicationEditDetailsSection: React.FC<Props> = ({
               requesting multiple datasets, please describe how you will use
               them.
             </p>
-          </div>
+          </div>*/}
 
           <div>
             <SnomedChooser

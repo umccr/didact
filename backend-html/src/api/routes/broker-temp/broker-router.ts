@@ -1,9 +1,6 @@
 import { Router } from 'express';
 import { IRoute } from '../_routes.interface';
-import { getMandatoryEnv } from '../../../app-env';
 import { URL } from 'url';
-import got from 'got';
-import { VisaController } from '../../controllers/visa-controller';
 import { add, getUnixTime } from 'date-fns';
 import cryptoRandomString from 'crypto-random-string';
 import { applicationServiceInstance } from '../../../business/services/application.service';
@@ -11,10 +8,15 @@ import { makeVisaSigned } from '../../../business/services/visa/make-visa';
 import { keyDefinitions } from '../../../business/services/visa/keys';
 import { jwtVerify } from 'jose/jwt/verify';
 import { createRemoteJWKSet } from 'jose/jwks/remote';
-import _ from 'lodash';
 import { SignJWT } from 'jose/jwt/sign';
 import { parseJwk } from 'jose/jwk/parse';
 import { RsaJose } from '../../../business/services/visa/rsa-jose';
+import { ldapClientPromise, ldapSearchPromise } from '../../../business/services/_ldap.utils';
+
+const EXCHANGE_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:token-exchange';
+
+const TOKEN_TYPE_GA4GH_COMPACT = 'urn:ga4gh:token-type:compact-passport';
+const TOKEN_TYPE_IETF_ACCESS = 'urn:ietf:params:oauth:token-type:access_token';
 
 /**
  * A temporary endpoint that acts to re-sign access JWTs from CILogon, but instead
@@ -29,41 +31,44 @@ export class BrokerRoute implements IRoute {
   }
 
   private initializeRoutes() {
-    this.router.post(`/exchange`, async (req, res, next) => {
+    this.router.post(`/token`, async (req, res) => {
       try {
-        if (req.body.grant_type != 'urn:ietf:params:oauth:grant-type:token-exchange') throw new Error('Can only do token exchange');
+        if (req.body.grant_type != EXCHANGE_GRANT_TYPE)
+          throw new Error(`The only grant type configured is token exchange - not '${req.body.grant_type}'`);
 
-        if (req.body.subject_token_type != 'urn:ietf:params:oauth:token-type:access_token')
-          throw new Error('Can only do token exchange of JWT access tokens');
+        if (req.body.subject_token_type != TOKEN_TYPE_IETF_ACCESS) throw new Error('Can only do token exchange of JWT access tokens');
 
-        if (req.body.requested_token_type != 'urn:ga4gh:token-type:self-contained-passport')
-          throw new Error('Can only do token exchange for 4k passports');
+        if (req.body.requested_token_type != TOKEN_TYPE_GA4GH_COMPACT) throw new Error('Can only do token exchange for 4k passports');
 
-        const jwt = req.body.subject_token;
+        const payload = await this.verifyIncomingCiLogon(req.body.subject_token);
 
-        const JWKS = createRemoteJWKSet(new URL('https://cilogon.org/oauth2/certs'));
+        // if we have got here then we know that we have received a validated JWT signed by cilogon
 
-        const { payload, protectedHeader } = await jwtVerify(jwt, JWKS, {
-          issuer: 'https://test.cilogon.org',
-        });
+        let subjectId: string = payload.sub;
 
-        const subjectId = payload.sub;
+        // correct subject ids..
+        if (subjectId == 'http://cilogon.org/serverT/users/51509288') subjectId = 'https://nagim.dev/p/iryba-kskqa-10000';
+        if (subjectId == 'http://cilogon.org/serverT/users/51505493') subjectId = 'https://nagim.dev/p/mbcxw-bpjwv-10000';
+
         const claims = {
           ga4gh: {
             vn: '1.2',
             iss: {
-              'https://didact-patto.dev.umccr.org': await this.getVisa(subjectId),
+              // this is cheating slightly.. a real broker should possibly be going off via https to talk to other visa issuers
+              'https://didact-patto.dev.umccr.org': await this.getDidactVisas(subjectId),
+              // this is some visas based off ldap grouping
+              'https://broker.nagim.dev': await this.getNagimVisas(subjectId),
             },
           },
         };
 
-        const newJwtSigner = new SignJWT(claims);
-        newJwtSigner.setProtectedHeader({ alg: 'RS256', typ: 'JWT', kid: 'rfc-rsa' });
-        newJwtSigner.setSubject(payload.sub);
-        newJwtSigner.setIssuedAt();
-        newJwtSigner.setIssuer('https://didact-patto.dev.umccr.org');
-        newJwtSigner.setExpirationTime('2h');
-        newJwtSigner.setJti(cryptoRandomString({ length: 16 }));
+        const newJwtSigner = new SignJWT(claims)
+          .setProtectedHeader({ alg: 'RS256', typ: 'JWT', kid: 'rfc-rsa' })
+          .setSubject(subjectId)
+          .setIssuedAt()
+          .setIssuer('https://broker.nagim.dev')
+          .setExpirationTime('365d')
+          .setJti(cryptoRandomString({ length: 16 }));
 
         const srcKey = keyDefinitions['rfc-rsa'] as RsaJose;
 
@@ -86,9 +91,9 @@ export class BrokerRoute implements IRoute {
 
         res.status(200).json({
           access_token: newJwt,
-          issued_token_type: 'urn:ga4gh:token-type:self-contained-passport',
+          issued_token_type: TOKEN_TYPE_GA4GH_COMPACT,
           token_type: 'Bearer',
-          expires_in: 60,
+          expires_in: 60 * 60,
         });
       } catch (error) {
         console.log('Token exchange failed');
@@ -113,63 +118,69 @@ export class BrokerRoute implements IRoute {
           console.log('Error', error.message);
         }
         console.log(error);
-        res.status(500).json({ message: 'Code exchange failed' });
+        res.status(500).json({ message: 'Code exchange failed', detail: error });
       }
     });
   }
 
-  private async getVisa(subjectId: string): Promise<any> {
+  private async verifyIncomingCiLogon(jwt: string): Promise<any> {
+    if (!jwt) throw new Error('A subject token must be provider');
+
+    const JWKS = createRemoteJWKSet(new URL('https://test.cilogon.org/oauth2/certs'));
+
+    const { payload } = await jwtVerify(jwt, JWKS, {
+      issuer: 'https://test.cilogon.org',
+    });
+
+    return payload;
+  }
+
+  private async getNagimVisas(subjectId: string): Promise<any> {
     const expiryDate = add(new Date(), {
-      days: 1,
+      days: 365,
+    });
+
+    const visaJti = cryptoRandomString({ length: 32 });
+    const visaAssertions: string[] = [];
+
+    const client = await ldapClientPromise();
+    const x = await ldapSearchPromise(client, 'o=NAGIMdev,o=CO,dc=biocommons,dc=org,dc=au', {
+      filter: '&(objectClass=voPerson)(isMemberOf=Trusted Researchers)',
+      scope: 'sub',
+      attributes: ['voPersonID'],
+    });
+
+    for (const trustedResult of x || []) {
+      if (trustedResult.voPersonID === subjectId) visaAssertions.push('r:trusted_researcher');
+    }
+
+    visaAssertions.push(`et:${getUnixTime(expiryDate)}`, `iu:${subjectId}`, `iv:${visaJti}`);
+    visaAssertions.sort();
+
+    console.log(`Looking for trusted researcher status for ${subjectId} resulted in visa assertions '${visaAssertions}'`);
+
+    return makeVisaSigned(keyDefinitions, visaAssertions.join(' '), 'rfc8032-7.1-test1');
+  }
+
+  private async getDidactVisas(subjectId: string): Promise<any> {
+    const expiryDate = add(new Date(), {
+      days: 365,
     });
 
     const visaJti = cryptoRandomString({ length: 16 });
 
     const visaAssertions: string[] = [];
 
-    console.log(`Looking for approved datasets for subject ${subjectId}`);
-
     for (const d of await applicationServiceInstance.findApprovedApplicationsInvolvedAsApplicant(subjectId)) visaAssertions.push(`c:${d}`);
 
     visaAssertions.push(`et:${getUnixTime(expiryDate)}`, `iu:${subjectId}`, `iv:${visaJti}`);
     visaAssertions.sort();
 
+    console.log(`Looking for approved datasets for ${subjectId} resulted in visa assertions '${visaAssertions}'`);
+
     return makeVisaSigned(keyDefinitions, visaAssertions.join(' '), 'rfc8032-7.1-test1');
   }
 }
-
-/*
-wellKnownRouter.get(`/passport`, async (req, res, next) => {
-  const payload = {
-    sub: 'me',
-    scope: 'ga4gh offline',
-    jti: 'adsasdadadasd',
-    ga4gh: {
-      vn: '1.0',
-      iss: {
-        'https://didact-patto.dev.umccr.org': [makeVisaSigned(keyDefinitions, 'c:12345 r.p:#r1', 'patto-kid1')],
-      },
-    },
-  };
-
-  const { publicKey, privateKey } = await generateKeyPair('PS256');
-
-  const encoder = new TextEncoder();
-
-  const sign = new GeneralSign(encoder.encode(JSON.stringify(payload)));
-
-  //sign
-  //    .addSignature(ecPrivateKey)
-  //    .setProtectedHeader({ alg: 'ES256' })
-
-  sign.addSignature(privateKey).setProtectedHeader({ alg: 'PS256' });
-
-  const jws = await sign.sign();
-
-  res.status(200).json(jws);
-});
-
- */
 
 // grant_type
 //       REQUIRED.  The value "urn:ietf:params:oauth:grant-type:token-

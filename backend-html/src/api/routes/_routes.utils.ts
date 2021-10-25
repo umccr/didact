@@ -6,7 +6,7 @@ export function createJwksCallback(): jwt.SecretCallbackLong {
     cache: true,
     rateLimit: true,
     jwksRequestsPerMinute: 5,
-    jwksUri: 'https://didact-patto.dev.umccr.org/.well-known/jwks', // 'https://cilogon.org/oauth2/certs',
+    jwksUri: 'https://broker.nagim.dev/.well-known/jwks', // 'https://cilogon.org/oauth2/certs',
   });
 }
 
@@ -14,7 +14,7 @@ export function createJwtMiddleware(callback: jwt.SecretCallbackLong) {
   return jwt({
     secret: callback,
     algorithms: ['RS256'],
-    issuer: 'https://didact-patto.dev.umccr.org', // https://test.cilogon.org',
+    issuer: 'https://broker.nagim.dev', // https://test.cilogon.org',
     // consider audience here as well
   });
 }

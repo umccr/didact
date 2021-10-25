@@ -146,6 +146,75 @@ class DidactStack extends Stack {
       oidcLoginClientSecretParam.logicalId],
     };
 
+    //
+    // Broker
+    //
+
+    const brokerCertificateArnParam = new CfnParameter(this, "BrokerCertArn", {
+      type: "String",
+      description: "Broker ALB certificate ARN (must cover <host>.<domain>)",
+    });
+
+    const brokerNameHostParam = new CfnParameter(this, "BrokerNameHost", {
+      type: "String",
+      description:
+        "ALB <host> (the host part of the ALB fully qualified name https://<host>.<domain>)",
+    });
+
+    const brokerNameDomainParam = new CfnParameter(this, "BrokerNameDomain", {
+      type: "String",
+      description:
+        "ALB <domain> (the domain part of the ALB fully qualified name https://<host>.<domain>)",
+    });
+
+    const brokerNameZoneIdParam = new CfnParameter(this, "BrokerNameZoneId", {
+      type: "String",
+      description:
+        "ALB domain zone id (must match <domain>, but can be left blank if creating DNS entries by hand)",
+    });
+
+    const brokerParameterGroup = {
+      Label: { default: "Broker" },
+      Parameters: [
+        brokerCertificateArnParam.logicalId,
+        brokerNameHostParam.logicalId,
+        brokerNameDomainParam.logicalId,
+        brokerNameZoneIdParam.logicalId,
+      ],
+    };
+
+    //
+    // LDAP
+    //
+
+    const ldapHostParam = new CfnParameter(this, "LdapHost", {
+      type: "String",
+      description: "LDAP host",
+    });
+
+    const ldapUserParam = new CfnParameter(this, "LdapUser", {
+      type: "String",
+      description:
+        "LDAP user",
+    });
+
+    const ldapSecretParam = new CfnParameter(this, "LdapSecret", {
+      type: "String",
+      description:
+        "LDAP secret",
+    });
+
+    const ldapParameterGroup = {
+      Label: { default: "LDAP" },
+      Parameters: [
+        ldapHostParam.logicalId,
+        ldapUserParam.logicalId,
+        ldapSecretParam.logicalId,
+      ],
+    };
+
+
+
     // we need to construct a CFN metadata section that has interface->parameter groups
     // this is not supported natively by CDK, so hack it in a bit
     const meta: any = {};
@@ -156,6 +225,7 @@ class DidactStack extends Stack {
         networkParameterGroup,
         albParameterGroup,
         oidcParameterGroup,
+        brokerParameterGroup
       ],
     };
     this.templateOptions.metadata = meta;
@@ -168,14 +238,21 @@ class DidactStack extends Stack {
       vpcParam,
       azsParam,
       publicSubnetsParam,
-      albCertificateArnParam: albCertificateArnParam,
-      albNameHostParam: albNameHostParam,
-      albNameDomainParam: albNameDomainParam,
-      albNameZoneIdParam: albNameZoneIdParam,
+      albCertificateArnParam,
+      albNameHostParam,
+      albNameDomainParam,
+      albNameZoneIdParam,
       oidcLoginHostParam,
       oidcLoginClientIdParam,
       oidcLoginClientSecretParam,
-      build: build,
+      brokerCertificateArnParam,
+      brokerNameHostParam,
+      brokerNameDomainParam,
+      brokerNameZoneIdParam,
+      ldapHostParam,
+      ldapUserParam,
+      ldapSecretParam,
+      build,
     });
   }
 }

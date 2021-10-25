@@ -1,6 +1,7 @@
 import { setupTestData } from './testing/setup-test-data';
 import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
 import { App } from './app';
+import { BrokerApp } from "./broker-app";
 
 // the development node bootstrap entrypoint
 // this entrypoint is used for running the backend locally on a dev machine - but must
@@ -30,17 +31,20 @@ setupTestData(true).then(async () => {
   }
 
   // note that these env variables need to match up with those set in the real IaC stack
-  process.env['LOGIN_HOST'] = 'https://cilogon.org';
+  process.env['LOGIN_HOST'] = 'https://test.cilogon.org';
   process.env['LOGIN_CLIENT_ID'] = secretJson.client_id;
   process.env['LOGIN_CLIENT_SECRET'] = secretJson.client_secret;
   process.env['LDAP_HOST'] = 'ldaps://ldap-test.cilogon.org';
   process.env['LDAP_USER'] = 'uid=readonly_user,ou=system,o=NAGIMdev,o=CO,dc=biocommons,dc=org,dc=au';
-  process.env['LDAP_SECRET'] = secretJson.ldap_password;
+  process.env['LDAP_SECRET'] = secretJson.ldap_secret;
 
   console.log('Creating Express app');
 
   const app = new App();
 
   // IT IS NOT THE ENTRYPOINT FOR USE IN PRODUCTION WITHIN THE AWS LAMBDA ENVIRONMENT
-  app.listen(3000);
+  app.listen(3000, () => {
+    const brokerApp = new BrokerApp();
+    brokerApp.listen(3001);
+  });
 });

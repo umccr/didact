@@ -17,9 +17,15 @@ export interface EcrBasedLambdaFunctionProps {
     lambdaRepoTag: string;
 
     /**
+     * The docker CMD to invoke this lambda on function execution
+     */
+    lambdaCmd: string[];
+
+    /**
      * The role to give the executing lambda (use helper generateLambdaRole())
      */
     lambdaRole?: Role;
+
 
     /**
      * The optional override of the default lambda memory size
@@ -52,6 +58,7 @@ export class EcrBasedLambdaFunction extends Construct {
             ),
             {
                 tag: props.lambdaRepoTag,
+                cmd: props.lambdaCmd,
             }
         );
         
@@ -62,7 +69,7 @@ export class EcrBasedLambdaFunction extends Construct {
             code: ecrImage,
             runtime: Runtime.FROM_IMAGE,
             handler: Handler.FROM_IMAGE,
-            environment: props.environmentVariables
+            environment: props.environmentVariables,
         });
 
         // we need to allow the lambda to be invoked by API gw

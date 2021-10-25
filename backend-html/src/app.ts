@@ -22,7 +22,7 @@ import { DatasetRoute } from './api/routes/protected/dataset.route';
 import { ApplicationRoute } from './api/routes/protected/application.route';
 import { VisaRoute } from './api/routes/service-service/visa.route';
 import { ManifestRoute } from './api/routes/service-service/manifest.route';
-import { BrokerRoute } from './api/routes/public/broker-router';
+import { BrokerRoute } from './api/routes/broker-temp/broker-router';
 import { UserRoute } from './api/routes/protected/user.route';
 import { ReferenceDataRoute } from './api/routes/protected/reference-data.route';
 import { createJwksCallback } from './api/routes/_routes.utils';
@@ -78,7 +78,7 @@ export class App {
 
     this.initializeMiddlewares();
 
-    this.initializeUnsecuredRoutes([new WellKnownRoute(), new VisaTestRoute(), new BrokerRoute()]);
+    this.initializeUnsecuredRoutes([new WellKnownRoute(), new VisaTestRoute()]);
     this.initializeServiceServiceRoutes([new VisaRoute(), new ManifestRoute()]);
     // this has to be last because it seems to alter all the api registrations
     // (TBD work out why.. probably should read the app.use() docs)
@@ -124,9 +124,11 @@ export class App {
     this.initializeErrorHandling();
   }
 
-  public listen(port: number) {
+  public listen(port: number, callback?: () => void) {
     this.app.listen(port, () => {
       console.log(`🚀 App listening on the port ${port}`);
+      if (callback)
+        callback();
     });
   }
 

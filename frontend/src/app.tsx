@@ -35,8 +35,6 @@ export const App: React.FC = () => {
   const history = useHistory();
   const { loginHost, loginClientId } = useEnvRelay();
 
-  // we prefer to use the okta login callback - but due to lack of PKCE
-  // we have a custom one for cilogon
   let loginCallbackComponent = LoginCallback;
 
   const oktaAuthConfig: OktaAuthOptions = {
@@ -58,13 +56,10 @@ export const App: React.FC = () => {
     oktaAuthConfig.authorizeUrl = `${loginHost}/authorize`;
     oktaAuthConfig.userinfoUrl = `${loginHost}/oauth2/userinfo`;
     oktaAuthConfig.tokenUrl = `${loginHost}/oauth2/token`;
-    oktaAuthConfig.scopes = [
-      "openid",
-      "email",
-      "profile",
-      "org.cilogon.userinfo",
-    ];
     oktaAuthConfig.responseType = ["code"];
+    oktaAuthConfig.scopes = [
+      "openid"
+    ];
     oktaAuthConfig.pkce = false;
     // the okta servers have a CORS setup that allows these two headers.. but because
     // CILogon (understandably) doesn't, we need to remove them from the outgoing

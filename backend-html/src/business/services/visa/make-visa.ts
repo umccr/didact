@@ -8,8 +8,10 @@ export function makeVisaContent(assertions: string[]): string {
 }
 
 /**
+ * Create a compact visa with visa content, a key identifier - and signed by the corresponding key from the passed
+ * in keyset.
  *
- * @param keys the definitions of all the keys
+ * @param keys the definitions of all the keys (kid -> hex string of Ed25519 seed)
  * @param visaContent a string of visa content we want to sign
  * @param kid the selected kid to use for signing
  */
@@ -25,8 +27,6 @@ export function makeVisaSigned(keys: { [kid: string]: EdDsaJose | RsaJose }, vis
 
     const keypair = forge.pki.ed25519.generateKeyPair({ seed: seed });
     const msgBuffer = Buffer.from(visaContent, 'utf8');
-
-    // console.log(msgBuffer);
 
     const signature = forge.pki.ed25519.sign({
       message: msgBuffer,

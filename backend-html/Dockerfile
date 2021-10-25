@@ -24,4 +24,3 @@ COPY build ./
 
 COPY frontend-dist ./client/dist/
 
-CMD [ "bootstrap-lambda.handler" ]
