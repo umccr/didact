@@ -74,9 +74,8 @@ export const DidactTableSchema = {
       state: { type: String, enum: ['started', 'submitted', 'approved', 'rejected'], required: true },
       // fields that can be edited during application process
       researchUseStatement: { type: String, required: false },
-      nonTechnicalStatement: { type: String, required: false },
-      snomed: { type: Set },
-      hgnc: { type: Set },
+      snomed: { type: Set, required: false },
+      hgnc: { type: Set, required: false },
       // fields recorded when a release is approved
       htsgetEndpoint: { type: String, required: false },
       readsEnabled: { type: Boolean, required: false },
@@ -98,6 +97,15 @@ export const DidactTableSchema = {
       gs3pk: { type: String, value: 'app#${datasetId}' },
       gs3sk: { type: String, value: 'app#${id}' },
     },
+    ApplicationReleaseSubject: {
+      pk: { type: String, value: 'app#${applicationId}' },
+      sk: { type: String, value: 'appReleaseSubject#${subjectId}' },
+      applicationId: { type: String, required: true },
+      subjectId: { type: String, required: true },
+      sampleIds: { type: Array, required: true },
+
+      // no indexes needed for the release artifacts as they are only ever needed as a complete set
+    },
     ApplicationEvent: {
       pk: { type: String, value: 'app#${applicationId}' },
       sk: { type: String, value: 'appEv#${id}' },
@@ -113,15 +121,6 @@ export const DidactTableSchema = {
       // been involved in
       gs1pk: { type: String, value: 'appEv#${byId}' },
       gs1sk: { type: String, value: 'app#${applicationId}' },
-    },
-    ApplicationReleaseSubject: {
-      pk: { type: String, value: 'app#${applicationId}' },
-      sk: { type: String, value: 'appReleaseSubject#${subjectId}' },
-      applicationId: { type: String, required: true },
-      subjectId: { type: String, required: true },
-      sampleIds: { type: Array, required: true },
-
-      // no indexes needed for the release artifacts as they
     },
   },
 };

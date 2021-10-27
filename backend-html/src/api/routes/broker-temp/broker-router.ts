@@ -46,21 +46,76 @@ export class BrokerRoute implements IRoute {
 
         let subjectId: string = payload.sub;
 
-        // correct subject ids..
-        if (subjectId == 'http://cilogon.org/serverT/users/51509288') subjectId = 'https://nagim.dev/p/iryba-kskqa-10000';
-        if (subjectId == 'http://cilogon.org/serverT/users/51505493') subjectId = 'https://nagim.dev/p/mbcxw-bpjwv-10000';
+        // this is coming from a trusted source i.e. by this point we have checked the signature - but still
+        // best to whitelist to the chars we expect..
+        if (!subjectId.match(/[\w.:/\-]+/)) throw new Error('Subject id can contain a limited subset of characters');
+
+        // we make a one-off preemptive call to the LDAP server to get their entry - coping with the fact
+        // that the sub may be mapped to two spots
+        const client = await ldapClientPromise();
+        const searchResult = await ldapSearchPromise(client, 'o=NAGIMdev,o=CO,dc=biocommons,dc=org,dc=au', {
+          filter: `&(objectClass=voPerson)(|(uid=${subjectId})(voPersonId=${subjectId}))`,
+          scope: 'sub',
+          attributes: ['voPersonID', 'cn', 'isMemberOf', 'mail'],
+        });
+
+        // example result
+        // [
+        //   {
+        //     dn: 'voPersonID=https://nagim.dev/p/txtpo-yhphm-10000,ou=people,o=NAGIMdev,o=CO,dc=biocommons,dc=org,dc=au',
+        //     controls: [],
+        //     sn: 'PattoPatterson',
+        //     cn: 'Andrew PattoPatterson',
+        //     objectClass: [
+        //       'person',
+        //       'organizationalPerson',
+        //       'inetOrgPerson',
+        //       'eduMember',
+        //       'voPerson'
+        //     ],
+        //     givenName: 'Andrew',
+        //     mail: 'andrew@patto.net',
+        //     uid: 'http://cilogon.org/serverA/users/46001501',
+        //     isMemberOf: [
+        //       'CO:members:all',
+        //       'CO:members:active',
+        //       'CO:COU:NAGIM devops:members:active',
+        //       'CO:admins',
+        //       'CO:COU:NAGIM devops:members:all',
+        //       'didact:dac',
+        //       'Trusted Researchers'
+        //     ],
+        //     'voPersonApplicationUID;app-nagim': 'https://nagim.dev/p/txtpo-yhphm-10000',
+        //     'voPersonApplicationUID;app-gen3': 'andrew.patterson',
+        //     voPersonID: 'https://nagim.dev/p/txtpo-yhphm-10000'
+        //   }
+        // ]
+
+        if (searchResult.length != 1) throw new Error(`Incorrect number of search results from the LDAP source when looking up ${subjectId}`);
+
+        // our NAGIM identifier is always mapped here by LDAP
+        subjectId = searchResult[0].voPersonID;
 
         const claims = {
           ga4gh: {
             vn: '1.2',
-            iss: {
-              // this is cheating slightly.. a real broker should possibly be going off via https to talk to other visa issuers
-              'https://didact-patto.dev.umccr.org': await this.getDidactVisas(subjectId),
-              // this is some visas based off ldap grouping
-              'https://broker.nagim.dev': await this.getNagimVisas(subjectId),
-            },
+            iss: {},
           },
         };
+
+        // this is cheating slightly.. a real broker should possibly be going off via https to talk to other visa issuers
+        const didact = await this.getDidactVisas(subjectId);
+
+        if (didact) claims.ga4gh.iss['https://didact-patto.dev.umccr.org'] = didact;
+
+        // this is some visas based off ldap grouping
+        const nagim = await this.getNagimVisas(subjectId, searchResult[0]);
+
+        if (nagim) claims.ga4gh.iss['https://broker.nagim.dev'] = nagim;
+
+        // dubious we should be adding in a name to the passport but helps for
+        // debugging in the prototype
+        if (searchResult[0].cn) claims['name'] = searchResult[0].cn;
 
         const newJwtSigner = new SignJWT(claims)
           .setProtectedHeader({ alg: 'RS256', typ: 'JWT', kid: 'rfc-rsa' })
@@ -129,56 +184,33 @@ export class BrokerRoute implements IRoute {
     const JWKS = createRemoteJWKSet(new URL('https://test.cilogon.org/oauth2/certs'));
 
     const { payload } = await jwtVerify(jwt, JWKS, {
+      algorithms: ['RS256', 'RS384', 'RS512'],
       issuer: 'https://test.cilogon.org',
     });
 
     return payload;
   }
 
-  private async getNagimVisas(subjectId: string): Promise<any> {
-    const expiryDate = add(new Date(), {
-      days: 365,
-    });
-
-    const visaJti = cryptoRandomString({ length: 32 });
+  private async getNagimVisas(subjectId: string, ldapPerson: any): Promise<any | null> {
     const visaAssertions: string[] = [];
 
-    const client = await ldapClientPromise();
-    const x = await ldapSearchPromise(client, 'o=NAGIMdev,o=CO,dc=biocommons,dc=org,dc=au', {
-      filter: '&(objectClass=voPerson)(isMemberOf=Trusted Researchers)',
-      scope: 'sub',
-      attributes: ['voPersonID'],
-    });
+    const groups = ldapPerson.isMemberOf || [];
 
-    for (const trustedResult of x || []) {
-      if (trustedResult.voPersonID === subjectId) visaAssertions.push('r:trusted_researcher');
-    }
-
-    visaAssertions.push(`et:${getUnixTime(expiryDate)}`, `iu:${subjectId}`, `iv:${visaJti}`);
-    visaAssertions.sort();
+    if (groups.includes('Trusted Researchers')) visaAssertions.push('r:trusted_researcher');
 
     console.log(`Looking for trusted researcher status for ${subjectId} resulted in visa assertions '${visaAssertions}'`);
 
-    return makeVisaSigned(keyDefinitions, visaAssertions.join(' '), 'rfc8032-7.1-test1');
+    return visaAssertions.length > 0 ? makeVisaSigned(keyDefinitions, 'rfc8032-7.1-test1', subjectId, { days: 30 }, visaAssertions) : null;
   }
 
-  private async getDidactVisas(subjectId: string): Promise<any> {
-    const expiryDate = add(new Date(), {
-      days: 365,
-    });
-
-    const visaJti = cryptoRandomString({ length: 16 });
-
-    const visaAssertions: string[] = [];
+  private async getDidactVisas(subjectId: string): Promise<any | null> {
+    const visaAssertions = [];
 
     for (const d of await applicationServiceInstance.findApprovedApplicationsInvolvedAsApplicant(subjectId)) visaAssertions.push(`c:${d}`);
 
-    visaAssertions.push(`et:${getUnixTime(expiryDate)}`, `iu:${subjectId}`, `iv:${visaJti}`);
-    visaAssertions.sort();
-
     console.log(`Looking for approved datasets for ${subjectId} resulted in visa assertions '${visaAssertions}'`);
 
-    return makeVisaSigned(keyDefinitions, visaAssertions.join(' '), 'rfc8032-7.1-test1');
+    return visaAssertions.length > 0 ? makeVisaSigned(keyDefinitions, 'rfc8032-7.1-test1', subjectId, { days: 1 }, visaAssertions) : null;
   }
 }
 

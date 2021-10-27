@@ -9,6 +9,10 @@ import { ConceptDictionary } from "../../components/concept-chooser/concept-choo
 import { LabelledContent } from "../../components/labelled-content";
 
 type Props = {
+  // master control that either enables overall editing or not.. will be based on
+  // overall application state
+  editEnabled: boolean;
+
   applicationData: ApplicationApiModel;
   datasetData: DatasetApiModel;
 
@@ -18,7 +22,13 @@ type Props = {
   hgnc: ConceptDictionary;
   setHgnc: React.Dispatch<React.SetStateAction<ConceptDictionary>>;
 
-  editEnabled: boolean;
+  rus: string;
+  setRus: React.Dispatch<React.SetStateAction<string>>;
+
+  // true if the editable state has been changed since last save i.e. would saveAction() do anything..
+  isDirty: boolean;
+  setIsDirty: React.Dispatch<React.SetStateAction<boolean>>;
+
   saveAction: () => void;
 };
 
@@ -29,41 +39,29 @@ export const ApplicationEditDetailsSection: React.FC<Props> = ({
   setSnomed,
   hgnc,
   setHgnc,
+  rus,
+  setRus,
   editEnabled,
+  isDirty,
+  setIsDirty,
   saveAction
 }) => {
   return (
     <section className="shadow sm:rounded-md sm:overflow-hidden">
-      <form action="#" method="POST">
         <div className="px-4 py-5 bg-white space-y-6 sm:p-6">
-          {/* data set id */}
-          <div className="grid grid-cols-3 gap-6">
-            <div className="col-span-3 sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Dataset Id
-              </label>
-              <div className="mt-1 flex rounded-md shadow-sm">
-                {applicationData.datasetId} ({datasetData.name})
-              </div>
-            </div>
-          </div>
-
-          <LabelledContent label="Title (PI)">
-            {applicationData.projectTitle} {applicationData.principalInvestigatorDisplayName}
+          <LabelledContent label="Dataset Id (Name)">
+            {applicationData.datasetId} ({datasetData.name})
           </LabelledContent>
 
-          {/*
-          <div>
-            <label
-              htmlFor="rus"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Research Use Statement
-            </label>
-            <div className="mt-1">
+          <LabelledContent label="Title (PI)">
+            {applicationData.projectTitle} ({applicationData.principalInvestigatorDisplayName})
+          </LabelledContent>
+
+          <LabelledContent label="Research Use Statement">
+            <>
               <textarea
                 id="rus"
-                rows={5}
+                rows={3}
                 className={classnames(
                   "shadow-sm",
                   "focus:ring-indigo-500",
@@ -79,30 +77,23 @@ export const ApplicationEditDetailsSection: React.FC<Props> = ({
                     "opacity-50": !editEnabled,
                   }
                 )}
-                value={applicationData.researchUseStatement}
+                value={rus}
                 disabled={!editEnabled}
+                onChange={(e) => { setRus(e.target.value); setIsDirty(true); } }
               />
-            </div>
-            <p className="mt-2 text-sm text-gray-500 opacity-75">
-              A RUS is a brief description of the applicant’s proposed use of
-              the dataset(s). The RUS will be reviewed by all parties
-              responsible for data covered by this Data Access Request. Please
-              note that if access is approved, you agree that the RUS, along
-              with your name and institution, will be included on this website
-              to describe your research project to the public. Please enter your
-              RUS in the area below. The RUS should be one or two paragraphs in
-              length and include research objectives, the study design, and an
-              analysis plan (including the phenotypic characteristics that will
-              be tested for association with genetic variants). If you are
-              requesting multiple datasets, please describe how you will use
-              them.
-            </p>
-          </div>*/}
+              <p className="mt-2 text-sm text-gray-500 opacity-75">
+                A RUS is a brief description of the applicant’s proposed use of
+                the dataset(s). The RUS will be reviewed by all parties
+                responsible for data covered by this Data Access Request.
+              </p>
+            </>
+          </LabelledContent>
 
           <div>
             <SnomedChooser
               selected={snomed}
               setSelected={setSnomed}
+              setIsDirty={setIsDirty}
               disabled={!editEnabled}
             />
           </div>
@@ -111,6 +102,7 @@ export const ApplicationEditDetailsSection: React.FC<Props> = ({
             <HgncChooser
               selected={hgnc}
               setSelected={setHgnc}
+              setIsDirty={setIsDirty}
               disabled={!editEnabled}
             />
           </div>
@@ -146,6 +138,7 @@ export const ApplicationEditDetailsSection: React.FC<Props> = ({
                       name="file-upload"
                       type="file"
                       className="sr-only"
+                      disabled={!editEnabled}
                     />
                   </label>
                   <p className="pl-1">or drag and drop</p>
@@ -157,18 +150,18 @@ export const ApplicationEditDetailsSection: React.FC<Props> = ({
         </div>
         <div className="px-4 py-3 bg-gray-50 text-right sm:px-6">
           <button
-            type="submit"
-            className={classnames("btn", "btn-blue", {
-              "opacity-50": true,
-              "cursor-not-allowed": true,
+            className={classnames("btn", {
+              "btn-blue" : !isDirty,
+              "btn-red" : isDirty,
+              "opacity-50": !editEnabled,
+              "cursor-not-allowed": !editEnabled,
             })}
-            disabled={true}
-            onClick={saveAction}
+            disabled={!editEnabled}
+            onClick={() => { if (isDirty) saveAction(); }}
           >
             Save
           </button>
         </div>
-      </form>
     </section>
   );
 };

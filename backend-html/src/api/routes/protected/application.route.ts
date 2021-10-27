@@ -22,6 +22,7 @@ export class ApplicationRoute implements IRoute {
     this.router.get(`${this.path}-r`, this.jwtMiddleware, this.applicationController.listApplicationsAsResearcher);
     this.router.get(`${this.path}-c`, this.jwtMiddleware, this.applicationController.listApplicationsAsCommittee);
     this.router.get(`${this.path}/:applicationId`, this.jwtMiddleware, this.applicationController.getApplication);
+    this.router.put(`${this.path}/:applicationId`, this.jwtMiddleware, this.applicationController.updateApplication);
 
     // a mini state machine for changing the application
     this.router.post(`${this.path}/:applicationId/approve`, this.jwtMiddleware, this.applicationController.approveApplication);

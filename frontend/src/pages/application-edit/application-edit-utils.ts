@@ -46,6 +46,15 @@ async function doLookup(
   system: string,
   codes: string[]
 ): Promise<ConceptDictionary> {
+
+  const dictionaryResult: ConceptDictionary = {};
+
+  if (!codes)
+    return dictionaryResult;
+
+  if (codes.length === 0)
+    return dictionaryResult;
+
   const bundle = {
     type: "batch",
     resourceType: "Bundle",
@@ -86,9 +95,8 @@ async function doLookup(
   // the results array will come back with equivalence to the codes we sent
   // in - so we use an index to help us jump across to the codes
   let entryCount = 0;
-  const dictionaryResult: ConceptDictionary = {};
 
-  for (const entry of results.entry) {
+  for (const entry of results?.entry || []) {
     if (entry?.response?.status === "200") {
       for (const param of entry?.resource?.parameter || []) {
         if (param?.name === "display")

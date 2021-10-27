@@ -12,24 +12,29 @@ export type ApplicationApiNewModel = {
     projectTitle: string,
 }
 
-export type ApplicationApiModel = ApplicationApiNewModel & {
-    id: string;
-
-    // who is the owner of the application
-    applicantId: string,
-    applicantDisplayName: string,
-
-    principalInvestigatorDisplayName: string,
-
-    state: string,
-
+export type ApplicationApiEditableModel = {
     researchUseStatement: string,
-    nonTechnicalStatement: string,
 
     // these are actually represented in other places as either Set of codes, or a dictionary keyed by
     // code - but for the purposes of API exchange we do them just as an array of codes
     snomed: string[];
     hgnc: string[];
+
+}
+
+export type ApplicationApiBackendModel = {
+    // id of the application itself as generated from the backend
+    id: string;
+
+    // who is the owner of the application
+    applicantId: string,
+
+    // the state machine current state
+    state: string,
+
+    // based on who has fetched this application, this is the list of
+    // actions that can be executed
+    allowedStateActions: string[];
 
     // date of last update of *any* part of this application in UTC ISO format
     lastUpdated: string;
@@ -39,6 +44,11 @@ export type ApplicationApiModel = ApplicationApiNewModel & {
     // when (and only when) the state == "approved" for release, these fields
     // will contain details of the release
     release?: ApplicationReleaseApiModel
+}
+
+export type ApplicationApiModel = ApplicationApiEditableModel & ApplicationApiNewModel & ApplicationApiBackendModel & {
+    applicantDisplayName: string,
+    principalInvestigatorDisplayName: string,
 };
 
 export type ApplicationReleaseApiModel = {
@@ -70,3 +80,4 @@ export type ApplicationReleaseSubjectApiModel = {
     subjectId: string;
     sampleIds: string[];
 }
+

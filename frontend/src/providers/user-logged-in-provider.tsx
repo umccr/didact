@@ -1,6 +1,7 @@
 import React from "react";
 import axios, { AxiosInstance } from "axios";
 import { useOktaAuth } from "@okta/okta-react";
+import { AccessToken } from "@okta/okta-auth-js";
 
 export type UserLoggedIn = {
   createAxiosInstance: () => AxiosInstance;
@@ -33,21 +34,24 @@ export const UserLoggedInContext = React.createContext<UserLoggedIn>(
 export const UserLoggedInProvider = (props: any) => {
   const { authState } = useOktaAuth();
 
-  const value =
-    authState && authState.isAuthenticated && authState.accessToken
-      ? {
-          createAxiosInstance: () =>
-            axios.create({
-              headers: {
-                Authorization: `Bearer ${authState.accessToken?.accessToken}`,
-              },
-            }),
-          loggedIn: true,
-          userId: authState.idToken?.claims["sub"] || "no subject",
-          userDisplayName: authState.idToken?.claims["name"] || "no name claim",
-          userBearerToken: authState.accessToken?.accessToken || "no bearer token"
-        }
-      : defaultValue;
+  let value = defaultValue;
+
+  if (authState && authState.isAuthenticated && authState.accessToken && (authState as any).passportToken) {
+    const passport: AccessToken = (authState as any).passportToken;
+
+    value = {
+      createAxiosInstance: () =>
+        axios.create({
+          headers: {
+            Authorization: `Bearer ${passport.accessToken}`,
+          },
+        }),
+      loggedIn: true,
+      userId: passport?.claims["sub"] || "no subject",
+      userDisplayName: passport?.claims["name"] || "no name claim",
+      userBearerToken: passport.accessToken || "no passport bearer token"
+    }
+  }
 
   return (
     <UserLoggedInContext.Provider value={value}>

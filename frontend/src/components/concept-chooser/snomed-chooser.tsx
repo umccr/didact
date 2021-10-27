@@ -8,6 +8,7 @@ type Props = {
   selected: ConceptDictionary;
 
   setSelected: Dispatch<React.SetStateAction<ConceptDictionary>>;
+  setIsDirty: Dispatch<React.SetStateAction<boolean>>;
 
   disabled: boolean;
 };
@@ -16,7 +17,7 @@ type Props = {
  * @param props
  * @constructor
  */
-export const SnomedChooser: React.FC<Props> = ({ selected, setSelected, disabled }) => {
+export const SnomedChooser: React.FC<Props> = ({ selected, setSelected, setIsDirty, disabled }) => {
   return (
     <ConceptChooser
       ontoServerUrl="https://r4.ontoserver.csiro.au/fhir"
@@ -28,8 +29,8 @@ export const SnomedChooser: React.FC<Props> = ({ selected, setSelected, disabled
       codePrefix="SNOMED"
       selected={selected}
       disabled={disabled}
-      addToSelected={(a,b) => addToSelected(setSelected, a, b)}
-      removeFromSelected={(a) => removeFromSelected(setSelected, a)}
+      addToSelected={(a,b) => { addToSelected(setSelected, a, b); setIsDirty(true); } }
+      removeFromSelected={(a) => { removeFromSelected(setSelected, a); setIsDirty(true); } }
     />
   );
 };

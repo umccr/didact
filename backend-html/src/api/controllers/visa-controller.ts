@@ -26,12 +26,6 @@ export class VisaController {
       if (req.query.has('sub')) {
         const subjectId = req.query.get('sub');
 
-        const expiryDate = add(new Date(), {
-          days: 1,
-        });
-
-        const jti = cryptoRandomString({ length: 16 });
-
         const visaAssertions: string[] = [];
 
         console.log(`Looking for approved datasets for subject ${subjectId}`);
@@ -40,10 +34,7 @@ export class VisaController {
 
         // only if we actually find some datasets should we bother making a visa
         if (visaAssertions.length > 0) {
-          visaAssertions.push(`et:${getUnixTime(expiryDate)}`, `iu:${subjectId}`, `iv:${jti}`);
-          visaAssertions.sort();
-
-          results.push(makeVisaSigned(keyDefinitions, visaAssertions.join(' '), 'rfc8032-7.1-test1'));
+          results.push(makeVisaSigned(keyDefinitions, 'rfc8032-7.1-test1', subjectId, { days: 1 }, visaAssertions));
         }
       }
 
@@ -64,32 +55,15 @@ export class VisaController {
     try {
       const results = [];
 
-      const expiryDate = add(new Date(), {
-        days: 1,
-      });
-
-      const jti1 = cryptoRandomString({ length: 16 });
-      const jti2 = cryptoRandomString({ length: 16 });
-
       // make visas representing the test vector input of the various RFCs (to check signatures are right)
-      results.push(makeVisaSigned(keyDefinitions, '', 'rfc8032-7.1-test1'));
-      results.push(makeVisaSigned(keyDefinitions, 'r', 'rfc8032-7.1-test2'));
+      results.push(makeVisaSigned(keyDefinitions, 'rfc8032-7.1-test1', 'subjecta', { hours: 1 }, ['a:b']));
+      results.push(makeVisaSigned(keyDefinitions, 'rfc8032-7.1-test2', 'subjectb', { hours: 1 }, ['test:assert']));
 
       // make some more realistic actual visas
       results.push(
-        makeVisaSigned(
-          keyDefinitions,
-          `c:urn:fdc:australiangenomics.org.au:2018:study/1 et:${getUnixTime(expiryDate)} iu:https://nagim.dev/p/abcde-12345-grety iv:${jti1}`,
-          'rfc8032-7.1-test1',
-        ),
+        makeVisaSigned(keyDefinitions, 'rfc8032-7.1-test1', 'subjectc', { hours: 1 }, [`c:urn:fdc:australiangenomics.org.au:2018:study/1`]),
       );
-      results.push(
-        makeVisaSigned(
-          keyDefinitions,
-          `et:${getUnixTime(expiryDate)} iu:https://nagim.dev/p/abcde-12345-grety iv:${jti2} r:https://doi.org/10.1038/s41431-018-0219-y`,
-          'rfc8032-7.1-test1',
-        ),
-      );
+      results.push(makeVisaSigned(keyDefinitions, 'rfc8032-7.1-test1', 'subjectd', { hours: 1 }, ['r:https://doi.org/10.1038/s41431-018-0219-y']));
 
       res.status(200).json(results);
     } catch (error) {
@@ -97,4 +71,3 @@ export class VisaController {
     }
   };
 }
-

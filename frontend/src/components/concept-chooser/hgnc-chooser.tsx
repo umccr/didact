@@ -10,6 +10,8 @@ type Props = {
   // the action to mutate concept state
   setSelected: Dispatch<React.SetStateAction<ConceptDictionary>>
 
+  setIsDirty: Dispatch<React.SetStateAction<boolean>>;
+
   disabled: boolean;
 };
 
@@ -17,7 +19,7 @@ type Props = {
  * @param props
  * @constructor
  */
-export const HgncChooser: React.FC<Props> = ({ selected, setSelected, disabled }) => {
+export const HgncChooser: React.FC<Props> = ({ selected, setSelected, setIsDirty, disabled }) => {
   return (
     <ConceptChooser
       ontoServerUrl="https://genomics.ontoserver.csiro.au/fhir"
@@ -29,8 +31,8 @@ export const HgncChooser: React.FC<Props> = ({ selected, setSelected, disabled }
       codePrefix="HGNC"
       selected={selected}
       disabled={disabled}
-      addToSelected={(a,b) => addToSelected(setSelected, a, b)}
-      removeFromSelected={(a) => removeFromSelected(setSelected, a)}
+      addToSelected={(a,b) => { addToSelected(setSelected, a, b); setIsDirty(true); } }
+      removeFromSelected={(a) => { removeFromSelected(setSelected, a); setIsDirty(true); } }
     />
   );
 };

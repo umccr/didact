@@ -7,8 +7,9 @@ import Dynamo from 'dynamodb-onetable/Dynamo';
 import { AnyEntity, Paged, Table } from 'dynamodb-onetable';
 import { getTable } from '../db/didact-table-utils';
 import { ApplicationEventDbType, ApplicationReleaseSubjectDbType, getTypes } from '../db/didact-table-types';
-import { ApplicationApiModel } from '../../../../shared-src/api-models/application';
+import { ApplicationApiEditableModel, ApplicationApiModel } from '../../../../shared-src/api-models/application';
 import { PERSON_NAMES } from '../../testing/setup-test-data';
+import _ from 'lodash';
 
 export type ReleaseArtifactModel = {
   sampleId: string;
@@ -35,8 +36,7 @@ class ApplicationService {
       principalInvestigatorId: principalInvestigatorId,
       datasetId: datasetId,
       projectTitle: projectTitle,
-      researchUseStatement: 'default RUS statement',
-      nonTechnicalStatement: 'default non tech statement',
+      researchUseStatement: '(replace with research use statement)',
       state: 'started',
     });
 
@@ -48,7 +48,57 @@ class ApplicationService {
       detail: '',
     });
 
-    return this.asApplication(newApp.id);
+    return this.asApplication(newApp.id, applicantId);
+  }
+
+  public async update(applicationId: string, editorUserId: string, updatedData: ApplicationApiEditableModel): Promise<ApplicationApiModel> {
+    const { ApplicationDbModel, ApplicationEventDbModel } = getTypes(this.table);
+
+    const existingApp = await ApplicationDbModel.get({ id: applicationId });
+
+    if (!existingApp) throw new Error(`Application ${applicationId} does not exist`);
+
+    // we need to convert our incoming snomed/hgnc to actual sets
+    // converting everything to sets helps out with the logic
+    const updateSnomedSet = new Set(_.isArray(updatedData.snomed) ? updatedData.snomed : []);
+    const updateHgncSet = new Set(_.isArray(updatedData.hgnc) ? updatedData.hgnc : []);
+    const existingSnomedSet = existingApp.snomed ? existingApp.snomed : new Set();
+    const existingHgncSet = existingApp.hgnc ? existingApp.hgnc : new Set();
+
+    console.log(
+      `Sets existing ${Array.from(existingSnomedSet.values())} ${Array.from(existingHgncSet.values())} update ${Array.from(
+        updateSnomedSet.values(),
+      )} ${Array.from(updateHgncSet.values())}`,
+    );
+
+    // we only want to actually do an update if there is genuine change
+    const changes: string[] = [];
+
+    // note the ecma Set is so woefully underpowered that it doesn't even support equality?? anyhow - use lodash
+    if (existingApp.researchUseStatement != updatedData.researchUseStatement) changes.push('rus');
+    if (!_.isEqual(updateSnomedSet, existingSnomedSet)) changes.push('snomed');
+    if (!_.isEqual(updateHgncSet, existingHgncSet)) changes.push('hgnc');
+
+    // only execute if we found a change
+    if (changes.length > 0) {
+      await ApplicationDbModel.update({
+        id: applicationId,
+        researchUseStatement: _.isString(updatedData.researchUseStatement) ? updatedData.researchUseStatement : undefined,
+        // we have to take into account here that onetable wants undefined for 'empty' data.. not empty data
+        snomed: updateSnomedSet.size > 0 ? (updateSnomedSet as any) : undefined,
+        hgnc: updateHgncSet.size > 0 ? (updateHgncSet as any) : undefined,
+      });
+
+      await ApplicationEventDbModel.create({
+        as: 'applicant',
+        byId: editorUserId,
+        applicationId: applicationId,
+        action: 'edit',
+        detail: `updated fields ${changes.join(', ')}`,
+      });
+    }
+
+    return this.asApplication(applicationId, editorUserId);
   }
 
   /**
@@ -60,7 +110,7 @@ class ApplicationService {
 
     const results = [];
 
-    for (const a of applicationIds) results.push(await this.asApplication(a));
+    for (const a of applicationIds) results.push(await this.asApplication(a, userId));
 
     return results;
   }
@@ -76,7 +126,7 @@ class ApplicationService {
 
     const results = [];
 
-    for (const a of applicationIds) results.push(await this.asApplication(a));
+    for (const a of applicationIds) results.push(await this.asApplication(a, userId));
 
     return results;
   }
@@ -86,13 +136,18 @@ class ApplicationService {
    * nested events etc. If application is not found returns null.
    *
    * @param applicationId
+   * @param viewerUserId
    */
-  public async asApplication(applicationId: string): Promise<ApplicationApiModel | null> {
-    const { ApplicationDbModel, ApplicationEventDbModel } = getTypes(this.table);
+  public async asApplication(applicationId: string, viewerUserId: string): Promise<ApplicationApiModel | null> {
+    const { ApplicationDbModel, ApplicationEventDbModel, DatasetDbModel, CommitteeMemberDbModel } = getTypes(this.table);
 
     const theApp = await ApplicationDbModel.get({ id: applicationId });
 
     if (!theApp) return null;
+
+    const theDataset = await DatasetDbModel.get({ id: theApp.datasetId });
+
+    if (!theDataset) return null;
 
     const theAppResult: ApplicationApiModel = {
       id: theApp.id,
@@ -100,17 +155,19 @@ class ApplicationService {
       datasetId: theApp.datasetId,
       projectTitle: theApp.projectTitle,
       researchUseStatement: theApp.researchUseStatement,
-      nonTechnicalStatement: theApp.nonTechnicalStatement,
       applicantId: theApp.applicantId,
-      applicantDisplayName: PERSON_NAMES[theApp.applicantId],
+      applicantDisplayName: PERSON_NAMES[theApp.applicantId] || theApp.applicantId,
       principalInvestigatorId: theApp.principalInvestigatorId,
-      principalInvestigatorDisplayName: PERSON_NAMES[theApp.principalInvestigatorId],
+      principalInvestigatorDisplayName: PERSON_NAMES[theApp.principalInvestigatorId] || theApp.principalInvestigatorId,
       snomed: Array.from((theApp.snomed as any) || []),
       hgnc: Array.from((theApp.hgnc as any) || []),
       // note: these data states are invalid in the API - they *will* be replaced with
       // a proper lastUpdated data and at least one event - or we will throw an exception later
       lastUpdated: '',
       events: [],
+      // these will be computed and added too later
+      allowedStateActions: [],
+      allowedViews: [],
     };
 
     const eventsSorted = [];
@@ -164,6 +221,27 @@ class ApplicationService {
     theAppResult.lastUpdated = eventsSorted[0].when;
     theAppResult.events = eventsSorted;
 
+    // TODO: all the logic for state transition permissions
+    const isEditor = theAppResult.principalInvestigatorId == viewerUserId || theAppResult.applicantId == viewerUserId;
+
+    let isCommittee = false;
+
+    for (const item of await CommitteeMemberDbModel.find({ committeeId: theDataset.committeeId }))
+      if (item.personId === viewerUserId) isCommittee = true;
+
+    //   const evaluateEnabled =
+    //     applicationData &&
+    //     ["submitted", "approved", "rejected"].includes(applicationData.state);
+
+    if (isEditor) {
+      if (!['submitted', 'approved', 'rejected'].includes(theAppResult.state)) theAppResult.allowedStateActions.push('submit');
+      if (!['submitted', 'approved', 'rejected'].includes(theAppResult.state)) theAppResult.allowedStateActions.push('edit');
+    }
+    if (isCommittee) {
+      if (['submitted'].includes(theAppResult.state)) theAppResult.allowedStateActions.push('evaluate');
+      if (['submitted'].includes(theAppResult.state)) theAppResult.allowedStateActions.push('approve');
+      if (['approved'].includes(theAppResult.state)) theAppResult.allowedStateActions.push('unapprove');
+    }
     return theAppResult;
   }
 
@@ -192,7 +270,7 @@ class ApplicationService {
     );
     await this.table.transact('write', transaction);
 
-    return this.asApplication(applicationId);
+    return this.asApplication(applicationId, approverUserId);
   }
 
   /**
@@ -220,7 +298,7 @@ class ApplicationService {
     );
     await this.table.transact('write', transaction);
 
-    return this.asApplication(applicationId);
+    return this.asApplication(applicationId, unapproverUserId);
   }
 
   /**
@@ -248,7 +326,7 @@ class ApplicationService {
     );
     await this.table.transact('write', transaction);
 
-    return this.asApplication(applicationId);
+    return this.asApplication(applicationId, submitterUserId);
   }
 
   /**
@@ -317,8 +395,15 @@ class ApplicationService {
 
     const results = new Set<string>([]);
 
-    for (const item of await ApplicationEventDbModel.find({ byId: subjectId, as: 'applicant' }, { index: 'gs1', fields: ['applicationId'] }))
+    for (const item of await ApplicationEventDbModel.find(
+      { byId: subjectId, as: 'applicant' },
+      {
+        index: 'gs1',
+        fields: ['applicationId'],
+      },
+    )) {
       results.add(item.applicationId);
+    }
 
     for (const item of await ApplicationDbModel.find({ applicantId: subjectId }, { index: 'gs1' })) {
       results.add(item.id);
@@ -342,7 +427,13 @@ class ApplicationService {
     // build a set of committees this person is in
     const committeeIds = new Set<string>([]);
 
-    for (const item of await CommitteeMemberDbModel.find({ personId: personId }, { index: 'gs1', fields: ['committeeId'] }))
+    for (const item of await CommitteeMemberDbModel.find(
+      { personId: personId },
+      {
+        index: 'gs1',
+        fields: ['committeeId'],
+      },
+    ))
       committeeIds.add(item.committeeId);
 
     console.log(committeeIds);
@@ -352,14 +443,28 @@ class ApplicationService {
     // now build a set of datasets that join to those committees
     for (const committeeId of committeeIds) {
       console.log(`Looking for all datasets involving committee ${committeeId}`);
-      for (const item of await DatasetDbModel.find({ committeeId: committeeId }, { index: 'gs1', fields: ['id'] })) datasetIds.add(item.id);
+      for (const item of await DatasetDbModel.find(
+        { committeeId: committeeId },
+        {
+          index: 'gs1',
+          fields: ['id'],
+        },
+      ))
+        datasetIds.add(item.id);
     }
 
     const results = new Set<string>([]);
 
     for (const datasetId of datasetIds) {
       console.log(`Looking for all applications involving dataset ${datasetId}`);
-      for (const item of await ApplicationDbModel.find({ datasetId: datasetId }, { index: 'gs3', fields: ['id'] })) results.add(item.id);
+      for (const item of await ApplicationDbModel.find(
+        { datasetId: datasetId },
+        {
+          index: 'gs3',
+          fields: ['id'],
+        },
+      ))
+        results.add(item.id);
     }
 
     return Array.from(results.values());

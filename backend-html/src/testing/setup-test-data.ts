@@ -11,13 +11,16 @@ export const PERSON_ALICE = 'https://nagim.dev/p/saqwfe-bvgfr-65987';
 export const PERSON_ANDREW_UNI = 'https://nagim.dev/p/wjaha-ppqrg-10000';
 export const PERSON_ANDREW_GMAIL = 'https://nagim.dev/p/kfuus-aodnv-10000';
 export const PERSON_DENIS_BAUER = 'https://nagim.dev/p/mbcxw-bpjwv-10000';
+export const PERSON_YATISH_JAIN = 'https://nagim.dev/p/iryba-kskqa-10000';
 
+// these will need to come from some sort of LDAP sync in reality
 export const PERSON_NAMES = {
-  [PERSON_ANDREW_UNI]: 'Andrew Patterson Uni',
-  [PERSON_ANDREW_GMAIL]: 'Andrew Patterson Gmail',
+  [PERSON_ANDREW_UNI]: 'Andrew UniMelbPatterson',
+  [PERSON_ANDREW_GMAIL]: 'Andrew GmailPatterson',
   [PERSON_ALICE]: 'Alice Smith',
   [PERSON_BOB]: 'Bob Wiseman',
   [PERSON_DENIS_BAUER]: 'Denis Bauer',
+  [PERSON_YATISH_JAIN]: 'Yatish Jain',
 };
 
 async function anyData(t: Table): Promise<boolean> {
@@ -204,9 +207,6 @@ export async function setupTestData(canDestroyExistingData: boolean) {
         datasetId: ds10g.id,
         projectTitle: 'Selective Access to Variant Data',
         researchUseStatement: 'Can we do it',
-        nonTechnicalStatement: 'Simpler',
-        snomed: new Set(['SNOMED:23423424']) as any,
-        hgnc: new Set(['HGNC:123']) as any,
         state: 'approved',
         readsEnabled: false,
         variantsEnabled: true,
@@ -261,7 +261,6 @@ export async function setupTestData(canDestroyExistingData: boolean) {
         datasetId: ds10g.id,
         projectTitle: 'A Partial Application for 10G Data',
         researchUseStatement: 'This application is for reseearch into ...',
-        nonTechnicalStatement: 'Simpler',
         snomed: new Set([
           '718212006' /*TMEM70 related mitochondrial encephalo-cardio-myopathy*/,
           '126488004' /*cancer of skin*/,
@@ -285,13 +284,12 @@ export async function setupTestData(canDestroyExistingData: boolean) {
     {
       const app10g = await ApplicationDbModel.create({
         id: '1AAC4S95109XIIERC35P577OOO',
-        applicantId: PERSON_DENIS_BAUER,
+        applicantId: PERSON_YATISH_JAIN,
         principalInvestigatorId: PERSON_DENIS_BAUER,
         datasetId: ds10g.id,
         projectTitle: 'An Examination of 10 Samples by CSIRO',
         researchUseStatement: 'RUS',
-        nonTechnicalStatement: 'Simpler',
-        snomed: new Set(['SNOMED:23423424']) as any,
+        snomed: new Set(['718212006' /*TMEM70 related mitochondrial encephalo-cardio-myopathy*/]) as any,
         hgnc: new Set(['HGNC:123']) as any,
         state: 'approved',
         readsEnabled: false,
@@ -307,7 +305,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
         applicationId: app10g.id,
         action: 'create',
         when: new Date(2021, 4, 13, 15, 44, 21),
-        byId: PERSON_DENIS_BAUER,
+        byId: PERSON_YATISH_JAIN,
         as: 'applicant',
         detail: 'I filled in all the data',
       });
@@ -394,7 +392,6 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       datasetId: 'urn:fdc:australiangenomics.org.au:2018:study/3',
       projectTitle: 'Use of Data in Genomic Research Study',
       researchUseStatement: 'We are intending to study things',
-      nonTechnicalStatement: 'Simpler',
       state: 'started',
     });
 
@@ -435,7 +432,10 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       datasetId: 'urn:fdc:australiangenomics.org.au:2018:study/2',
       projectTitle: 'Hearts - Do we Need Them?',
       researchUseStatement: 'Hearts',
-      nonTechnicalStatement: 'Tickety thing',
+      // this is deliberately not a real snomed - it will be autoremoved on form edit
+      snomed: new Set(['23423424']) as any,
+      // this is deliberately not a real hgnc - it will be autoremoved on form edit
+      hgnc: new Set(['HGNC:ABCDEF']) as any,
       state: 'started',
     });
 

@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { applicationServiceInstance } from '../../business/services/application.service';
-import { ApplicationApiModel } from '../../../../shared-src/api-models/application';
+import { ApplicationApiEditableModel, ApplicationApiModel } from '../../../../shared-src/api-models/application';
 import { ReleaseManifestApiModel, ReleaseManifestArtifactApiModel } from '../../../../shared-src/api-models/release';
 import { getAuthUser } from './_controller.utils';
 
@@ -35,6 +35,20 @@ export class ApplicationController {
         input.datasetId,
         input.projectTitle,
       );
+
+      res.status(200).json(data);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public updateApplication = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const user = getAuthUser(req, res, next);
+      const appId = req.params.applicationId;
+      const input: ApplicationApiEditableModel = req.body;
+
+      const data = await applicationServiceInstance.update(appId, user, input);
 
       res.status(200).json(data);
     } catch (error) {
