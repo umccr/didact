@@ -34,7 +34,7 @@ function NoMatch() {
  */
 export const App: React.FC = () => {
   const history = useHistory();
-  const { loginHost } = useEnvRelay();
+  const { loginHost, loginClientId } = useEnvRelay();
 
   const oktaAuthConfig: OktaAuthOptions = {
     issuer: loginHost,

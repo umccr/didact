@@ -1,7 +1,7 @@
 import { setupTestData } from './testing/setup-test-data';
 import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
 import { App } from './app';
-import { BrokerApp } from "./broker-app";
+import { BrokerApp } from './broker-app';
 
 // the development node bootstrap entrypoint
 // this entrypoint is used for running the backend locally on a dev machine - but must

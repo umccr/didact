@@ -3,7 +3,7 @@ import { IRoute } from '../_routes.interface';
 import { URL } from 'url';
 import { add, getUnixTime } from 'date-fns';
 import cryptoRandomString from 'crypto-random-string';
-import { applicationServiceInstance } from '../../../business/services/application.service';
+import { applicationServiceInstance } from '../../../business/services/application/application.service';
 import { makeVisaSigned } from '../../../business/services/visa/make-visa';
 import { keyDefinitions } from '../../../business/services/visa/keys';
 import { jwtVerify } from 'jose/jwt/verify';

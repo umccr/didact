@@ -67,6 +67,14 @@ export class DidactWebSite extends Construct {
 
     table.grantReadWriteData(htmlFunctionRole);
 
+    const referenceDataTable = Table.fromTableName(
+      this,
+      "ReferenceDataTable",
+      "didact-reference-data"
+    );
+
+    referenceDataTable.grantReadData(htmlFunctionRole);
+
     // because it is vital that the names we use here for env variables are consistent into the backends
     // we use a shared type definition AppEnvName
     const envs: { [name in AppEnvName]: string } = {
@@ -80,16 +88,16 @@ export class DidactWebSite extends Construct {
       LOGIN_CLIENT_SECRET: props.oidcLoginClientSecretParam.valueAsString,
       LDAP_HOST: props.ldapHostParam.valueAsString,
       LDAP_USER: props.ldapUserParam.valueAsString,
-      LDAP_SECRET: props.ldapSecretParam.valueAsString
+      LDAP_SECRET: props.ldapSecretParam.valueAsString,
     };
 
     const functionConstruct = new EcrBasedLambdaFunction(this, "HtmlFunction", {
       lambdaRole: htmlFunctionRole,
       lambdaRepoNameParam: props.lambdaRepoNameParam.valueAsString,
-      lambdaCmd:  [ "bootstrap-lambda.handler" ],
+      lambdaCmd: ["bootstrap-lambda.handler"],
       lambdaRepoTag: props.build,
       environmentVariables: envs,
-      duration: Duration.minutes(1)
+      duration: Duration.minutes(1),
     });
 
     /*const albConstruct = new MultiTargetLoadBalancer(this, "LoadBalancer", {
@@ -107,28 +115,31 @@ export class DidactWebSite extends Construct {
       nameHost: props.albNameHostParam.valueAsString,
       nameDomain: props.albNameDomainParam.valueAsString,
       nameZoneId: props.albNameZoneIdParam.valueAsString,
-      targetDefault: functionConstruct.function
-    })
+      targetDefault: functionConstruct.function,
+    });
 
     {
-      const brokerFunctionConstruct = new EcrBasedLambdaFunction(this, "BrokerFunction", {
-        lambdaRole: htmlFunctionRole,
-        lambdaRepoNameParam: props.lambdaRepoNameParam.valueAsString,
-        lambdaCmd:  [ "bootstrap-broker-lambda.handler" ],
-        lambdaRepoTag: props.build,
-        environmentVariables: envs,
-        duration: Duration.minutes(1)
-      });
+      const brokerFunctionConstruct = new EcrBasedLambdaFunction(
+        this,
+        "BrokerFunction",
+        {
+          lambdaRole: htmlFunctionRole,
+          lambdaRepoNameParam: props.lambdaRepoNameParam.valueAsString,
+          lambdaCmd: ["bootstrap-broker-lambda.handler"],
+          lambdaRepoTag: props.build,
+          environmentVariables: envs,
+          duration: Duration.minutes(1),
+        }
+      );
 
       const brokerApiGateway = new WebsiteApiGateway(this, "BrokerApiGateway", {
         certificateArn: props.brokerCertificateArnParam.valueAsString,
         nameHost: props.brokerNameHostParam.valueAsString,
         nameDomain: props.brokerNameDomainParam.valueAsString,
         nameZoneId: props.brokerNameZoneIdParam.valueAsString,
-        targetDefault: brokerFunctionConstruct.function
+        targetDefault: brokerFunctionConstruct.function,
       });
     }
-
   }
 
   /**

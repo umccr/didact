@@ -10,6 +10,7 @@ export const PERSON_BOB = 'https://nagim.dev/p/ertyu-asrqe-34526';
 export const PERSON_ALICE = 'https://nagim.dev/p/saqwfe-bvgfr-65987';
 export const PERSON_ANDREW_UNI = 'https://nagim.dev/p/wjaha-ppqrg-10000';
 export const PERSON_ANDREW_GMAIL = 'https://nagim.dev/p/kfuus-aodnv-10000';
+export const PERSON_ANDREW_PATTO = 'https://nagim.dev/p/txtpo-yhphm-10000';
 export const PERSON_DENIS_BAUER = 'https://nagim.dev/p/mbcxw-bpjwv-10000';
 export const PERSON_YATISH_JAIN = 'https://nagim.dev/p/iryba-kskqa-10000';
 
@@ -17,6 +18,7 @@ export const PERSON_YATISH_JAIN = 'https://nagim.dev/p/iryba-kskqa-10000';
 export const PERSON_NAMES = {
   [PERSON_ANDREW_UNI]: 'Andrew UniMelbPatterson',
   [PERSON_ANDREW_GMAIL]: 'Andrew GmailPatterson',
+  [PERSON_ANDREW_PATTO]: 'Andrew PattoPatterson',
   [PERSON_ALICE]: 'Alice Smith',
   [PERSON_BOB]: 'Bob Wiseman',
   [PERSON_DENIS_BAUER]: 'Denis Bauer',
@@ -107,6 +109,12 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       committeeId: c2.id,
       personId: PERSON_ANDREW_GMAIL,
       role: 'administrator',
+    });
+
+    await CommitteeMemberDbModel.create({
+      committeeId: c2.id,
+      personId: PERSON_ANDREW_PATTO,
+      role: 'member',
     });
 
     await CommitteeMemberDbModel.create({
@@ -208,13 +216,14 @@ export async function setupTestData(canDestroyExistingData: boolean) {
         projectTitle: 'Selective Access to Variant Data',
         researchUseStatement: 'Can we do it',
         state: 'approved',
+        htsgetEndpoint: 'https://htsget.dev.umccr.org',
         readsEnabled: false,
         variantsEnabled: true,
+        fhirEndpoint: 'https://fhir.dev.umccr.org',
         phenotypesEnabled: true,
-        fhirEndpoint: 'https://csiro.au/foo',
-        htsgetEndpoint: 'https://htsget.ap-southeast-2.dev.umccr.org',
-        panelappId: 111,
-        panelappVersion: '0.211',
+        panelappId: 221,
+        panelappVersion: '0.149',
+        panelappMinConfidence: 2,
       });
 
       await ApplicationEventDbModel.create({
@@ -235,21 +244,16 @@ export async function setupTestData(canDestroyExistingData: boolean) {
         applicationId: app10g.id,
         subjectId: mary.subjectId,
         sampleIds: Array.from(mary.sampleIds),
-        // path: 'reads/10g/https/HG00096',
       });
       await ApplicationReleaseSubjectDbModel.create({
         applicationId: app10g.id,
         subjectId: scott.subjectId,
         sampleIds: Array.from(scott.sampleIds),
-        //path: 'variants/10g/https/HG00097',
-        //chromosomes: 'chr1 chr2 chr3',
       });
       await ApplicationReleaseSubjectDbModel.create({
         applicationId: app10g.id,
         subjectId: bruce.subjectId,
         sampleIds: Array.from(bruce.sampleIds),
-        //path: 'variants/10g/https/HG00099',
-        // chromosomes: 'chr1 chr11 chr12',
       });
     }
 
@@ -292,13 +296,14 @@ export async function setupTestData(canDestroyExistingData: boolean) {
         snomed: new Set(['718212006' /*TMEM70 related mitochondrial encephalo-cardio-myopathy*/]) as any,
         hgnc: new Set(['HGNC:123']) as any,
         state: 'approved',
+        htsgetEndpoint: 'https://htsget.dev.umccr.org',
         readsEnabled: false,
         variantsEnabled: true,
+        fhirEndpoint: 'https://fhir.dev.umccr.org',
         phenotypesEnabled: true,
-        fhirEndpoint: 'https://csiro.au/tbd',
-        htsgetEndpoint: 'https://htsget.ap-southeast-2.dev.umccr.org',
-        panelappId: 111,
-        panelappVersion: '0.211',
+        panelappId: 221,
+        panelappVersion: '0.149',
+        panelappMinConfidence: 3,
       });
 
       await ApplicationEventDbModel.create({

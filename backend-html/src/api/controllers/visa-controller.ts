@@ -3,7 +3,7 @@ import { makeVisaSigned } from '../../business/services/visa/make-visa';
 import { keyDefinitions } from '../../business/services/visa/keys';
 import { getUnixTime, add } from 'date-fns';
 import cryptoRandomString from 'crypto-random-string';
-import { applicationServiceInstance } from '../../business/services/application.service';
+import { applicationServiceInstance } from '../../business/services/application/application.service';
 import { URLSearchParams } from 'url';
 
 export class VisaController {

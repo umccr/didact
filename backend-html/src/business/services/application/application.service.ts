@@ -5,17 +5,11 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import Dynamo from 'dynamodb-onetable/Dynamo';
 import { AnyEntity, Paged, Table } from 'dynamodb-onetable';
-import { getTable } from '../db/didact-table-utils';
-import { ApplicationEventDbType, ApplicationReleaseSubjectDbType, getTypes } from '../db/didact-table-types';
-import { ApplicationApiEditableModel, ApplicationApiModel } from '../../../../shared-src/api-models/application';
-import { PERSON_NAMES } from '../../testing/setup-test-data';
+import { getTable } from '../../db/didact-table-utils';
+import { ApplicationEventDbType, ApplicationReleaseSubjectDbType, getTypes } from '../../db/didact-table-types';
+import { ApplicationApiEditableModel, ApplicationApiModel, ApplicationStateApiEnum } from '../../../../../shared-src/api-models/application';
+import { PERSON_NAMES } from '../../../testing/setup-test-data';
 import _ from 'lodash';
-
-export type ReleaseArtifactModel = {
-  sampleId: string;
-  path: string;
-  chromosomes?: string[];
-};
 
 class ApplicationService {
   private readonly table: Table;
@@ -45,7 +39,7 @@ class ApplicationService {
       byId: applicantId,
       applicationId: newApp.id,
       action: 'create',
-      detail: '',
+      detail: undefined,
     });
 
     return this.asApplication(newApp.id, applicantId);
@@ -136,9 +130,12 @@ class ApplicationService {
    * nested events etc. If application is not found returns null.
    *
    * @param applicationId
-   * @param viewerUserId
+   * @param viewerUserId the id of the user viewing this application or null to indicate this is a system level view
+   *
+   * Notes:
+   * when null is passed to the viewerUserId, the allowedActions field will be left empty
    */
-  public async asApplication(applicationId: string, viewerUserId: string): Promise<ApplicationApiModel | null> {
+  public async asApplication(applicationId: string, viewerUserId: string | null): Promise<ApplicationApiModel | null> {
     const { ApplicationDbModel, ApplicationEventDbModel, DatasetDbModel, CommitteeMemberDbModel } = getTypes(this.table);
 
     const theApp = await ApplicationDbModel.get({ id: applicationId });
@@ -151,7 +148,7 @@ class ApplicationService {
 
     const theAppResult: ApplicationApiModel = {
       id: theApp.id,
-      state: theApp.state,
+      state: theApp.state as ApplicationStateApiEnum,
       datasetId: theApp.datasetId,
       projectTitle: theApp.projectTitle,
       researchUseStatement: theApp.researchUseStatement,
@@ -167,7 +164,6 @@ class ApplicationService {
       events: [],
       // these will be computed and added too later
       allowedStateActions: [],
-      allowedViews: [],
     };
 
     const eventsSorted = [];
@@ -205,6 +201,7 @@ class ApplicationService {
         phenotypesEnabled: theApp.phenotypesEnabled,
         panelappId: theApp.panelappId.toString(),
         panelappVersion: theApp.panelappVersion,
+        panelappMinConfidence: theApp.panelappMinConfidence,
         panelappDisplayName: 'TBD',
         htsgetEndpoint: theApp.htsgetEndpoint,
         fhirEndpoint: theApp.fhirEndpoint,
@@ -221,27 +218,52 @@ class ApplicationService {
     theAppResult.lastUpdated = eventsSorted[0].when;
     theAppResult.events = eventsSorted;
 
+    console.log(`Making transition choices ${viewerUserId}`);
     // TODO: all the logic for state transition permissions
-    const isEditor = theAppResult.principalInvestigatorId == viewerUserId || theAppResult.applicantId == viewerUserId;
+    // should move into a function and be used as guards for the actual transition methods too
+    if (viewerUserId) {
+      const isEditor = theAppResult.principalInvestigatorId == viewerUserId || theAppResult.applicantId == viewerUserId;
 
-    let isCommittee = false;
+      let isCommittee = false;
 
-    for (const item of await CommitteeMemberDbModel.find({ committeeId: theDataset.committeeId }))
-      if (item.personId === viewerUserId) isCommittee = true;
+      for (const item of await CommitteeMemberDbModel.find({ committeeId: theDataset.committeeId }))
+        if (item.personId === viewerUserId) isCommittee = true;
 
-    //   const evaluateEnabled =
-    //     applicationData &&
-    //     ["submitted", "approved", "rejected"].includes(applicationData.state);
+      // some experimental logic - if someone is both an editor of an application *and* on the committee for
+      // the data (shouldn't happen but I can conceive of it) - then we automatically remove them from the committee
+      // permissions
+      if (isCommittee && isEditor) isCommittee = false;
 
-    if (isEditor) {
-      if (!['submitted', 'approved', 'rejected'].includes(theAppResult.state)) theAppResult.allowedStateActions.push('submit');
-      if (!['submitted', 'approved', 'rejected'].includes(theAppResult.state)) theAppResult.allowedStateActions.push('edit');
+      if (isEditor) {
+        switch (theAppResult.state) {
+          case 'started':
+            theAppResult.allowedStateActions.push('submit', 'edit');
+            break;
+          case 'submitted':
+            break;
+          case 'approved':
+            break;
+          case 'rejected':
+            break;
+        }
+      }
+      if (isCommittee) {
+        switch (theAppResult.state) {
+          case 'started':
+            theAppResult.allowedStateActions.push('comment');
+            break;
+          case 'submitted':
+            theAppResult.allowedStateActions.push('approve');
+            break;
+          case 'approved':
+            theAppResult.allowedStateActions.push('unapprove');
+            break;
+          case 'rejected':
+            break;
+        }
+      }
     }
-    if (isCommittee) {
-      if (['submitted'].includes(theAppResult.state)) theAppResult.allowedStateActions.push('evaluate');
-      if (['submitted'].includes(theAppResult.state)) theAppResult.allowedStateActions.push('approve');
-      if (['approved'].includes(theAppResult.state)) theAppResult.allowedStateActions.push('unapprove');
-    }
+
     return theAppResult;
   }
 
@@ -257,7 +279,20 @@ class ApplicationService {
     const { ApplicationDbModel, ApplicationEventDbModel } = getTypes(this.table);
 
     const transaction = {};
-    await ApplicationDbModel.update({ id: applicationId, state: 'approved' }, { transaction });
+    await ApplicationDbModel.update(
+      {
+        id: applicationId,
+        state: 'approved',
+        readsEnabled: false,
+        variantsEnabled: true,
+        phenotypesEnabled: true,
+        fhirEndpoint: 'https://csiro.au/tbd',
+        htsgetEndpoint: 'https://htsget.ap-southeast-2.dev.umccr.org',
+        panelappId: 111,
+        panelappVersion: '0.211',
+      },
+      { transaction },
+    );
     await ApplicationEventDbModel.create(
       {
         as: 'committee',
@@ -285,7 +320,22 @@ class ApplicationService {
     const { ApplicationDbModel, ApplicationEventDbModel } = getTypes(this.table);
 
     const transaction = {};
-    await ApplicationDbModel.update({ id: applicationId, state: 'submitted' }, { transaction });
+    await ApplicationDbModel.update(
+      {
+        id: applicationId,
+        state: 'submitted',
+        // we need to ensure we remove any state that might have been saved from the previous approval
+        fhirEndpoint: undefined,
+        htsgetEndpoint: undefined,
+        readsEnabled: undefined,
+        variantsEnabled: undefined,
+        panelappMinConfidence: undefined,
+        panelappVersion: undefined,
+        panelappId: undefined,
+      },
+      { transaction },
+    );
+    // TODO: remove any release subject records
     await ApplicationEventDbModel.create(
       {
         as: 'committee',

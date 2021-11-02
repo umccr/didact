@@ -94,13 +94,10 @@ export const ApplicationEditPage: React.FC = () => {
     await queryClient.invalidateQueries(APPLICATION_EDIT_QUERY_NAME);
   };
 
-  const submitDisabled =
-    applicationData &&
-    ["submitted", "approved", "rejected"].includes(applicationData.state);
+  const editEnabled = applicationData?.allowedStateActions.includes("edit") || false;
+  const submitEnabled = applicationData?.allowedStateActions.includes("submit") || false;
 
-  const applicationEditDisabled =
-    applicationData &&
-    ["submitted", "approved", "rejected"].includes(applicationData.state);
+  const committeeVisible = applicationData?.allowedStateActions.includes("approve") || applicationData?.allowedStateActions.includes("unapprove") || false;
 
   const evaluateEnabled =
     applicationData &&
@@ -141,7 +138,7 @@ export const ApplicationEditPage: React.FC = () => {
                 setHgnc={setHgncUnsaved}
                 rus={rusUnsaved}
                 setRus={setRusUnsaved}
-                editEnabled={!submitDisabled}
+                editEnabled={editEnabled}
                 isDirty={isUnsavedChanged}
                 setIsDirty={setIsUnsavedChanged}
                 saveAction={save}
@@ -163,10 +160,10 @@ export const ApplicationEditPage: React.FC = () => {
                     <button
                       onClick={submitClick}
                       className={classnames("btn", "btn-blue", {
-                        "opacity-50": submitDisabled,
-                        "cursor-not-allowed": submitDisabled,
+                        "opacity-50": !submitEnabled,
+                        "cursor-not-allowed": !submitEnabled,
                       })}
-                      disabled={submitDisabled}
+                      disabled={!submitEnabled}
                     >
                       Submit
                     </button>
@@ -182,7 +179,7 @@ export const ApplicationEditPage: React.FC = () => {
                 />
               )}
 
-              {evaluateEnabled && (
+              {evaluateEnabled && committeeVisible && (
                 <ApplicationEditCommitteeSection
                   applicationData={applicationData}
                   dataUses={datasetData.dataUses}
@@ -193,6 +190,11 @@ export const ApplicationEditPage: React.FC = () => {
               )}
             </div>
           </div>
+          <section className="mt-12">
+            <pre className="text-xs">
+              {JSON.stringify(applicationData, null, 2)}
+            </pre>
+          </section>
         </div>
       )}
     </LayoutStandardPage>

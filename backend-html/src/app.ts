@@ -127,8 +127,7 @@ export class App {
   public listen(port: number, callback?: () => void) {
     this.app.listen(port, () => {
       console.log(`🚀 App listening on the port ${port}`);
-      if (callback)
-        callback();
+      if (callback) callback();
     });
   }
 
@@ -297,7 +296,10 @@ export class App {
 
     this.app.use(helmet.hidePoweredBy());
     this.app.use(hpp());
+
     this.app.use(express.json());
+    this.app.set('json spaces', 2);
+
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(cookieParser());
   }

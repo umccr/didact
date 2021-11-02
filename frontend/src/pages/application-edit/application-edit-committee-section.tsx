@@ -8,7 +8,7 @@ import { UserLoggedInContext } from "../../providers/user-logged-in-provider";
 import { DataUseTable } from "../../components/data-use-table";
 import { DatasetApiSubjectModel } from "../../../../shared-src/api-models/dataset";
 import { SubjectsTable } from "../../components/subjects-table";
-import { ApplicationApiModel } from "../../../../shared-src/api-models/application";
+import { ApplicationApiModel, ApplicationApproveApiModel } from "../../../../shared-src/api-models/application";
 import { PanelappPanelApiModel } from "../../../../shared-src/api-models/panelapp-panel";
 import { Concept } from "../../components/concept-chooser/concept-chooser-types";
 import { LabelledContent } from "../../components/labelled-content";
@@ -50,7 +50,7 @@ export const ApplicationEditCommitteeSection: React.FC<Props> = ({
 
   const approveClick = async () => {
     await createAxiosInstance()
-      .post<{}>(`/api/application/${applicationData.id}/approve`, {})
+      .post<ApplicationApproveApiModel>(`/api/application/${applicationData.id}/approve`, {})
       .then((response) => response.data);
 
     await queryClient.invalidateQueries(APPLICATION_EDIT_QUERY_NAME);
