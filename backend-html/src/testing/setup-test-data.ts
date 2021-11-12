@@ -210,7 +210,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
     {
       const app10g = await ApplicationDbModel.create({
         id: '8XZF4195109CIIERC35P577HAM',
-        applicantId: PERSON_ANDREW_UNI,
+        applicantId: PERSON_ANDREW_PATTO,
         principalInvestigatorId: PERSON_BOB,
         datasetId: ds10g.id,
         projectTitle: 'Selective Access to Variant Data',
@@ -230,7 +230,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
         applicationId: app10g.id,
         action: 'create',
         when: new Date(2021, 4, 13, 15, 44, 21),
-        byId: PERSON_ANDREW_UNI,
+        byId: PERSON_ANDREW_PATTO,
         as: 'applicant',
         detail: 'I filled in all the data',
       });
@@ -264,21 +264,21 @@ export async function setupTestData(canDestroyExistingData: boolean) {
         principalInvestigatorId: PERSON_ANDREW_UNI,
         datasetId: ds10g.id,
         projectTitle: 'A Partial Application for 10G Data',
-        researchUseStatement: 'This application is for reseearch into ...',
+        researchUseStatement: 'This application is for research into ...',
         snomed: new Set([
           '718212006' /*TMEM70 related mitochondrial encephalo-cardio-myopathy*/,
           '126488004' /*cancer of skin*/,
           '472315005' /* mitocondrial cardiomyopathy*/,
         ]) as any,
         hgnc: new Set(['HGNC:123']) as any,
-        state: 'started',
+        state: 'submitted',
       });
 
       await ApplicationEventDbModel.create({
         applicationId: partialApp10g.id,
         action: 'create',
         when: new Date(2021, 4, 13, 15, 44, 21),
-        byId: PERSON_ANDREW_UNI,
+        byId: PERSON_ANDREW_PATTO,
         as: 'applicant',
         detail: 'I filled in all the data',
       });
@@ -296,7 +296,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
         snomed: new Set(['718212006' /*TMEM70 related mitochondrial encephalo-cardio-myopathy*/]) as any,
         hgnc: new Set(['HGNC:123']) as any,
         state: 'approved',
-        htsgetEndpoint: 'https://htsget.dev.umccr.org',
+        htsgetEndpoint: 'https://htsget-apse2.dev.umccr.org',
         readsEnabled: false,
         variantsEnabled: true,
         fhirEndpoint: 'https://fhir.dev.umccr.org',

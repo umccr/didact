@@ -8,7 +8,10 @@ import { UserLoggedInContext } from "../../providers/user-logged-in-provider";
 import { DataUseTable } from "../../components/data-use-table";
 import { DatasetApiSubjectModel } from "../../../../shared-src/api-models/dataset";
 import { SubjectsTable } from "../../components/subjects-table";
-import { ApplicationApiModel, ApplicationApproveApiModel } from "../../../../shared-src/api-models/application";
+import {
+  ApplicationApiModel,
+  ApplicationApproveApiModel,
+} from "../../../../shared-src/api-models/application";
 import { PanelappPanelApiModel } from "../../../../shared-src/api-models/panelapp-panel";
 import { Concept } from "../../components/concept-chooser/concept-chooser-types";
 import { LabelledContent } from "../../components/labelled-content";
@@ -48,14 +51,6 @@ export const ApplicationEditCommitteeSection: React.FC<Props> = ({
     }
   );
 
-  const approveClick = async () => {
-    await createAxiosInstance()
-      .post<ApplicationApproveApiModel>(`/api/application/${applicationData.id}/approve`, {})
-      .then((response) => response.data);
-
-    await queryClient.invalidateQueries(APPLICATION_EDIT_QUERY_NAME);
-  };
-
   const unapproveClick = async () => {
     await createAxiosInstance()
       .post<{}>(`/api/application/${applicationData.id}/unapprove`, {})
@@ -71,9 +66,45 @@ export const ApplicationEditCommitteeSection: React.FC<Props> = ({
     applicationData.state
   );
 
+  const [phenotypesEnabled, setPhenotypesEnabled] = useState<boolean>(false);
+  const [variantsEnabled, setVariantsEnabled] = useState<boolean>(false);
+  const [readsEnabled, setReadsEnabled] = useState<boolean>(false);
   const [subjectsSelected, setSubjectsSelected] = useState<Set<string>>(
     new Set([])
   );
+  const [panelSelected, setPanelSelected] = useState<string>("");
+  const [panelMin, setPanelMin] = useState<string>("3");
+
+  const approveClick = async () => {
+    const approveDetails: ApplicationApproveApiModel = {
+      readsEnabled: readsEnabled,
+      variantsEnabled: variantsEnabled,
+      phenotypesEnabled: phenotypesEnabled,
+      subjectIds: Array.from(subjectsSelected),
+    };
+
+    if (panelappData && panelSelected) {
+      const sel = panelappData.find((a) => a.id == panelSelected);
+      console.log(sel);
+
+      if (sel) {
+        approveDetails.panelappId = parseInt(sel.id);
+        approveDetails.panelappVersion = sel.version;
+        approveDetails.panelappMinConfidence = parseInt(panelMin);
+
+      }
+    }
+
+    await createAxiosInstance()
+      .post<ApplicationApproveApiModel>(
+        `/api/application/${applicationData.id}/approve`, approveDetails
+      )
+      .then((response) => response.data);
+
+    await queryClient.invalidateQueries(APPLICATION_EDIT_QUERY_NAME);
+  };
+
+
 
   const [evaluateState, setEvaluateState] = useState<Evaluation[]>([]);
 
@@ -135,13 +166,13 @@ export const ApplicationEditCommitteeSection: React.FC<Props> = ({
 
         {!applicationData.release && (
           <>
-            <LabelledContent label="Dataset Usage Restrictions">
+            {/*<LabelledContent label="Dataset Usage Restrictions">
               <div className="space-y-4 w-1/2">
                 {dataUses.map((du, index) => (
                   <DataUseTable key={index} dataUse={du} />
                 ))}
               </div>
-            </LabelledContent>
+            </LabelledContent> */}
 
             <LabelledContent label="Dataset Usage Evaluator">
               <button
@@ -155,11 +186,13 @@ export const ApplicationEditCommitteeSection: React.FC<Props> = ({
                   {dataUses.map((du, index) => (
                     <>
                       <div key={index} className="col-span-1">
-                        Evaluating against DUO <br/>
+                        Evaluating against DUO <br />
                         <DataUseTable dataUse={du} />
                       </div>
                       <div className="col-span-2">
-                        {evaluateState[index].messages.map((msg) => <p>{msg}</p>)}
+                        {evaluateState[index].messages.map((msg) => (
+                          <p>{msg}</p>
+                        ))}
                       </div>
                     </>
                   ))}
@@ -175,18 +208,53 @@ export const ApplicationEditCommitteeSection: React.FC<Props> = ({
               />
             </LabelledContent>
 
-            <LabelledContent label="Genomic Region Restrictions">
+            <LabelledContent label="Data Type Restrictions">
               <div>
                 <label className="inline-flex items-center">
-                  <input type="checkbox" className="form-checkbox" checked />
-                  <span className="ml-2">Enforce Panel Restriction</span>
+                  <input
+                    type="checkbox"
+                    className="form-checkbox"
+                    checked={phenotypesEnabled}
+                    onChange={() => setPhenotypesEnabled(!phenotypesEnabled)}
+                  />
+                  <span className="ml-2">Phenotypes</span>
                 </label>
+              </div>
+              <div>
+                <label className="inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    className="form-checkbox"
+                    disabled
+                    checked={readsEnabled}
+                    onChange={() => setReadsEnabled(!readsEnabled)}
+                  />
+                  <span className="ml-2">Reads</span>
+                </label>
+              </div>
+              <div>
+                <label className="inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    className="form-checkbox"
+                    checked={variantsEnabled}
+                    onChange={() => setVariantsEnabled(!variantsEnabled)}
+                  />
+                  <span className="ml-2">Variants</span>
+                </label>
+              </div>
+            </LabelledContent>
+
+            <LabelledContent label="Genomic Region Restrictions">
+              <div>
                 <p>
                   NOTE: enabling any restriction on genomic region will disable
                   access to fastq files (or any other sources of raw read data).
                 </p>
               </div>
-              <select className="form-select block w-full mt-1 p-2 border-gray-400 border">
+              <select className="form-select block w-full mt-1 p-2 border-gray-400 border" value={panelSelected}
+                      onChange={(e) => setPanelSelected(e.target.value)} >
+                <option value={""}>-- none --</option>
                 {panelappData &&
                   panelappData.map((p, index) => (
                     <option key={index} value={p.id}>
@@ -200,9 +268,10 @@ export const ApplicationEditCommitteeSection: React.FC<Props> = ({
                     <input
                       type="radio"
                       className="form-radio"
-                      name="radio"
+                      name="panelMin"
                       value="1"
-                      checked
+                      checked={panelMin === "1"}
+                      onClick={() => setPanelMin("1")}
                     />
                     <span className="ml-2">Red Genes</span>
                   </label>
@@ -212,8 +281,9 @@ export const ApplicationEditCommitteeSection: React.FC<Props> = ({
                     <input
                       type="radio"
                       className="form-radio"
-                      name="radio"
-                      value="2"
+                      name="panelMin"
+                      checked={panelMin === "2"}
+                      onClick={() => setPanelMin("2")}
                     />
                     <span className="ml-2">Yellow Genes</span>
                   </label>
@@ -223,14 +293,44 @@ export const ApplicationEditCommitteeSection: React.FC<Props> = ({
                     <input
                       type="radio"
                       className="form-radio"
-                      name="radio"
-                      value="3"
+                      name="panelMin"
+                      checked={panelMin === "3"}
+                      onClick={() => setPanelMin("3")}
                     />
                     <span className="ml-2">Green Genes</span>
                   </label>
                 </div>
               </div>
             </LabelledContent>
+
+            <LabelledContent label="Cloud Restrictions">
+              <div>
+                <div>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      className="form-radio"
+                      name="cloudRegion"
+                      value="1"
+                      checked
+                    />
+                    <span className="ml-2">AWS Sydney</span>
+                  </label>
+                </div>
+                <div>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      className="form-radio"
+                      name="cloudRegion"
+                      disabled={true}
+                    />
+                    <span className="ml-2">Google Sydney</span>
+                  </label>
+                </div>
+              </div>
+            </LabelledContent>
+
           </>
         )}
       </div>

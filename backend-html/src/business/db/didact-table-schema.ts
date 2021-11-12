@@ -115,7 +115,7 @@ export const DidactTableSchema = {
       action: { type: String, enum: ['create', 'edit', 'comment', 'submit', 'unsubmit', 'approve', 'unapprove'], required: true },
       byId: { type: String, required: true },
       as: { type: String, enum: ['applicant', 'committee'], required: true },
-      detail: { type: String, required: true },
+      detail: { type: String },
 
       // we index such that we can quickly discover for any applicant which applications they have
       // been involved in

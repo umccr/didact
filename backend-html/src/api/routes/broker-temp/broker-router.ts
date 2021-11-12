@@ -1,15 +1,12 @@
 import { Router } from 'express';
-import { IRoute } from '../_routes.interface';
 import { URL } from 'url';
-import { add, getUnixTime } from 'date-fns';
 import cryptoRandomString from 'crypto-random-string';
+import { createRemoteJWKSet, importJWK, jwtVerify, SignJWT } from 'jose';
+
 import { applicationServiceInstance } from '../../../business/services/application/application.service';
-import { makeVisaSigned } from '../../../business/services/visa/make-visa';
+import { makeCompactVisaSigned, makeJwtVisaSigned } from '../../../business/services/visa/make-visa';
 import { keyDefinitions } from '../../../business/services/visa/keys';
-import { jwtVerify } from 'jose/jwt/verify';
-import { createRemoteJWKSet } from 'jose/jwks/remote';
-import { SignJWT } from 'jose/jwt/sign';
-import { parseJwk } from 'jose/jwk/parse';
+import { IRoute } from '../_routes.interface';
 import { RsaJose } from '../../../business/services/visa/rsa-jose';
 import { ldapClientPromise, ldapSearchPromise } from '../../../business/services/_ldap.utils';
 
@@ -38,7 +35,7 @@ export class BrokerRoute implements IRoute {
 
         if (req.body.subject_token_type != TOKEN_TYPE_IETF_ACCESS) throw new Error('Can only do token exchange of JWT access tokens');
 
-        if (req.body.requested_token_type != TOKEN_TYPE_GA4GH_COMPACT) throw new Error('Can only do token exchange for 4k passports');
+        if (req.body.requested_token_type != TOKEN_TYPE_GA4GH_COMPACT) throw new Error('Can only do token exchange for compact passports');
 
         const payload = await this.verifyIncomingCiLogon(req.body.subject_token);
 
@@ -48,10 +45,10 @@ export class BrokerRoute implements IRoute {
 
         // this is coming from a trusted source i.e. by this point we have checked the signature - but still
         // best to whitelist to the chars we expect..
-        if (!subjectId.match(/[\w.:/\-]+/)) throw new Error('Subject id can contain a limited subset of characters');
+        if (!subjectId.match(/[\w.:/\-]+/)) throw new Error('Subject id must contain a limited subset of characters');
 
         // we make a one-off preemptive call to the LDAP server to get their entry - coping with the fact
-        // that the sub may be mapped to two spots
+        // that the sub may be mapped to two spots (uid or voPersonId)
         const client = await ldapClientPromise();
         const searchResult = await ldapSearchPromise(client, 'o=NAGIMdev,o=CO,dc=biocommons,dc=org,dc=au', {
           filter: `&(objectClass=voPerson)(|(uid=${subjectId})(voPersonId=${subjectId}))`,
@@ -97,21 +94,30 @@ export class BrokerRoute implements IRoute {
         subjectId = searchResult[0].voPersonID;
 
         const claims = {
-          ga4gh: {
-            vn: '1.2',
-            iss: {},
+          ga4gh_passport_v1: [],
+          ga4gh_passport_v2: {
+            visas: [],
           },
         };
 
         // this is cheating slightly.. a real broker should possibly be going off via https to talk to other visa issuers
-        const didact = await this.getDidactVisas(subjectId);
+        // in this case we are just looking up a db in the same account
+        {
+          const didactJwt = await getDidactJwtVisas(subjectId);
+          const didactCompact = await getDidactCompactVisa(subjectId);
 
-        if (didact) claims.ga4gh.iss['https://didact-patto.dev.umccr.org'] = didact;
+          if (didactJwt) claims.ga4gh_passport_v1.push(didactJwt);
+          if (didactCompact) claims.ga4gh_passport_v2.visas.push(didactCompact);
+        }
 
         // this is some visas based off ldap grouping
-        const nagim = await this.getNagimVisas(subjectId, searchResult[0]);
+        {
+          const nagimJwt = await getNagimJwtVisas(subjectId, searchResult[0]);
+          const nagimCompact = await getNagimCompactVisa(subjectId, searchResult[0]);
 
-        if (nagim) claims.ga4gh.iss['https://broker.nagim.dev'] = nagim;
+          if (nagimJwt) claims.ga4gh_passport_v1.push(nagimJwt);
+          if (nagimCompact) claims.ga4gh_passport_v2.visas.push(nagimCompact);
+        }
 
         // dubious we should be adding in a name to the passport but helps for
         // debugging in the prototype
@@ -123,7 +129,7 @@ export class BrokerRoute implements IRoute {
           .setIssuedAt()
           .setIssuer('https://broker.nagim.dev')
           .setExpirationTime('365d')
-          .setJti(cryptoRandomString({ length: 16 }));
+          .setJti(cryptoRandomString({ length: 16, type: 'alphanumeric' }));
 
         const srcKey = keyDefinitions['rfc-rsa'] as RsaJose;
 
@@ -140,7 +146,7 @@ export class BrokerRoute implements IRoute {
           qi: srcKey.qiBase64Url,
         };
 
-        const rsaPrivateKey = await parseJwk(srcKeyAsPrivateJwk);
+        const rsaPrivateKey = await importJWK(srcKeyAsPrivateJwk);
 
         const newJwt = await newJwtSigner.sign(rsaPrivateKey);
 
@@ -190,28 +196,104 @@ export class BrokerRoute implements IRoute {
 
     return payload;
   }
+}
 
-  private async getNagimVisas(subjectId: string, ldapPerson: any): Promise<any | null> {
-    const visaAssertions: string[] = [];
+/**
+ * Consult the Didact internal database and return v2 controlled access visa containing all datasets
+ * this subject is allowed into.
+ *
+ * @param subjectId
+ * @return a JSON object that is a single v2 plain text visa
+ */
+async function getDidactCompactVisa(subjectId: string): Promise<any | null> {
+  const visaAssertions = [];
 
-    const groups = ldapPerson.isMemberOf || [];
+  for (const d of await applicationServiceInstance.findApprovedApplicationsInvolvedAsApplicant(subjectId)) visaAssertions.push(`c:${d}`);
 
-    if (groups.includes('Trusted Researchers')) visaAssertions.push('r:trusted_researcher');
+  console.log(`Looking for approved datasets for ${subjectId} resulted in visa assertions '${visaAssertions}'`);
 
-    console.log(`Looking for trusted researcher status for ${subjectId} resulted in visa assertions '${visaAssertions}'`);
+  return visaAssertions.length > 0
+    ? makeCompactVisaSigned(keyDefinitions, 'https://didact-patto.dev.umccr.org', 'rfc8032-7.1-test1', subjectId, { days: 1 }, visaAssertions)
+    : null;
+}
 
-    return visaAssertions.length > 0 ? makeVisaSigned(keyDefinitions, 'rfc8032-7.1-test1', subjectId, { days: 30 }, visaAssertions) : null;
-  }
+/**
+ * Consult the Didact internal database and returned v1 controlled access visas for all datasets
+ * this subject is allowed into.
+ *
+ * @param subjectId
+ */
+async function getDidactJwtVisas(subjectId: string): Promise<string[] | null> {
+  const resultVisas: string[] = [];
 
-  private async getDidactVisas(subjectId: string): Promise<any | null> {
-    const visaAssertions = [];
+  for (const d of await applicationServiceInstance.findApprovedApplicationsInvolvedAsApplicant(subjectId))
+    resultVisas.push(
+      await makeJwtVisaSigned(
+        keyDefinitions,
+        'https://didact-patto.dev.umccr.org',
+        'rfc-rsa',
+        subjectId,
+        { days: 1 },
+        {
+          ga4gh_visa_v1: {
+            type: 'ControlledAccessGrants',
+            // this should be the date of approval..
+            asserted: 1549632872,
+            value: d,
+            source: 'didact',
+            by: 'dac',
+          },
+        },
+      ),
+    );
 
-    for (const d of await applicationServiceInstance.findApprovedApplicationsInvolvedAsApplicant(subjectId)) visaAssertions.push(`c:${d}`);
+  if (resultVisas.length > 0) return resultVisas;
 
-    console.log(`Looking for approved datasets for ${subjectId} resulted in visa assertions '${visaAssertions}'`);
+  return null;
+}
 
-    return visaAssertions.length > 0 ? makeVisaSigned(keyDefinitions, 'rfc8032-7.1-test1', subjectId, { days: 1 }, visaAssertions) : null;
-  }
+const TRUSTED_RESEARCHER_GROUP = 'Trusted Researchers';
+
+async function getNagimCompactVisa(subjectId: string, ldapPerson: any): Promise<any | null> {
+  const visaAssertions: string[] = [];
+
+  const groups = ldapPerson.isMemberOf || [];
+
+  if (groups.includes(TRUSTED_RESEARCHER_GROUP)) visaAssertions.push('r:trusted_researcher');
+
+  console.log(`Looking for trusted researcher status for ${subjectId} resulted in visa assertions '${visaAssertions}'`);
+
+  return visaAssertions.length > 0
+    ? makeCompactVisaSigned(keyDefinitions, 'https://broker.nagim.dev', 'rfc8032-7.1-test1', subjectId, { days: 30 }, visaAssertions)
+    : null;
+}
+
+async function getNagimJwtVisas(subjectId: string, ldapPerson: any): Promise<string[] | null> {
+  const groups = ldapPerson.isMemberOf || [];
+
+  if (groups.includes(TRUSTED_RESEARCHER_GROUP))
+    return [
+      await makeJwtVisaSigned(
+        keyDefinitions,
+        'https://broker.nagim.dev',
+        'rfc-rsa',
+        subjectId,
+        { days: 30 },
+        {
+          ga4gh_visa_v1: {
+            type: 'ResearcherStatus',
+            // this theoretically should be the datetime when the person was put into the trusted research group - for the moment whatever..
+            asserted: 1549680000,
+            value: 'https://doi.org/10.1038/s41431-018-0219-y',
+            // MCRI..
+            source: 'https://ror.org/048fyec77',
+            by: 'system',
+          },
+        },
+      ),
+    ];
+
+  return null;
 }
 
 // grant_type

@@ -1,6 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { applicationServiceInstance } from '../../business/services/application/application.service';
-import { ApplicationApiEditableModel, ApplicationApiModel } from '../../../../shared-src/api-models/application';
+import {
+  ApplicationApiEditableModel,
+  ApplicationApiModel,
+  ApplicationApproveApiModel
+} from "../../../../shared-src/api-models/application";
 import { ReleaseManifestApiModel, ReleaseManifestArtifactsApiModel } from '../../../../shared-src/api-models/release';
 import { getAuthUser } from './_controller.utils';
 import { PanelAppDynamoClient } from '../../panelapp/panel-app-dynamo-client';
@@ -90,6 +94,10 @@ export class ApplicationController {
     try {
       const user = getAuthUser(req, res, next);
       const appId = req.params.applicationId;
+      const input: ApplicationApproveApiModel = req.body;
+
+      console.log(input);
+
       const data = await applicationServiceInstance.approveApplication(appId, user);
 
       res.status(200).json(data);

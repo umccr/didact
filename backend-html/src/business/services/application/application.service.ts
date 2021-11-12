@@ -174,14 +174,16 @@ class ApplicationService {
         aeItemPage = await ApplicationEventDbModel.find({ applicationId: applicationId });
 
         for (const item of aeItemPage) {
-          eventsSorted.push({
+          const newEvent = {
             when: item.when.toJSON(),
             byId: item.byId,
             byName: PERSON_NAMES[item.byId],
             as: item.as,
             action: item.action,
-            detail: item.detail,
-          });
+          };
+          if (item.detail) newEvent['detail'] = item.detail;
+
+          eventsSorted.push(newEvent);
         }
 
         aeNext = aeItemPage.next;

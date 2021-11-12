@@ -104,15 +104,21 @@ export type ApplicationReleaseSubjectApiModel = {
   sampleIds: string[];
 };
 
+/**
+ * This is the submission
+ */
 export type ApplicationApproveApiModel = {
   readsEnabled: boolean,
   variantsEnabled: boolean,
+
   phenotypesEnabled: boolean,
 
+  // allow the approver to specify the subjects.. in reality this would
+  // need lots of double checking
+  subjectIds: string[];
+
+  // allow the approve to specify the panel to use
   panelappId?: number,
   panelappVersion?: string,
-
-
-
+  panelappMinConfidence?: number;
 };
-

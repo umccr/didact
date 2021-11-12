@@ -190,11 +190,11 @@ export const ApplicationEditPage: React.FC = () => {
               )}
             </div>
           </div>
-          <section className="mt-12">
+          {/*<section className="mt-12">
             <pre className="text-xs">
               {JSON.stringify(applicationData, null, 2)}
             </pre>
-          </section>
+          </section>*/}
         </div>
       )}
     </LayoutStandardPage>

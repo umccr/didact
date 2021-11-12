@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { makeVisaSigned } from '../../business/services/visa/make-visa';
+import { makeCompactVisaSigned } from '../../business/services/visa/make-visa';
 import { keyDefinitions } from '../../business/services/visa/keys';
 import { getUnixTime, add } from 'date-fns';
 import cryptoRandomString from 'crypto-random-string';
@@ -34,7 +34,9 @@ export class VisaController {
 
         // only if we actually find some datasets should we bother making a visa
         if (visaAssertions.length > 0) {
-          results.push(makeVisaSigned(keyDefinitions, 'rfc8032-7.1-test1', subjectId, { days: 1 }, visaAssertions));
+          results.push(
+            makeCompactVisaSigned(keyDefinitions, 'https://didact-patto.dev.umccr.org', 'rfc8032-7.1-test1', subjectId, { days: 1 }, visaAssertions),
+          );
         }
       }
 
@@ -56,14 +58,24 @@ export class VisaController {
       const results = [];
 
       // make visas representing the test vector input of the various RFCs (to check signatures are right)
-      results.push(makeVisaSigned(keyDefinitions, 'rfc8032-7.1-test1', 'subjecta', { hours: 1 }, ['a:b']));
-      results.push(makeVisaSigned(keyDefinitions, 'rfc8032-7.1-test2', 'subjectb', { hours: 1 }, ['test:assert']));
+      results.push(
+        makeCompactVisaSigned(keyDefinitions, 'https://didact-patto.dev.umccr.org', 'rfc8032-7.1-test1', 'subjecta', { hours: 1 }, ['a:b']),
+      );
+      results.push(
+        makeCompactVisaSigned(keyDefinitions, 'https://didact-patto.dev.umccr.org', 'rfc8032-7.1-test2', 'subjectb', { hours: 1 }, ['test:assert']),
+      );
 
       // make some more realistic actual visas
       results.push(
-        makeVisaSigned(keyDefinitions, 'rfc8032-7.1-test1', 'subjectc', { hours: 1 }, [`c:urn:fdc:australiangenomics.org.au:2018:study/1`]),
+        makeCompactVisaSigned(keyDefinitions, 'https://didact-patto.dev.umccr.org', 'rfc8032-7.1-test1', 'subjectc', { hours: 1 }, [
+          `c:urn:fdc:australiangenomics.org.au:2018:study/1`,
+        ]),
       );
-      results.push(makeVisaSigned(keyDefinitions, 'rfc8032-7.1-test1', 'subjectd', { hours: 1 }, ['r:https://doi.org/10.1038/s41431-018-0219-y']));
+      results.push(
+        makeCompactVisaSigned(keyDefinitions, 'https://didact-patto.dev.umccr.org', 'rfc8032-7.1-test1', 'subjectd', { hours: 1 }, [
+          'r:https://doi.org/10.1038/s41431-018-0219-y',
+        ]),
+      );
 
       res.status(200).json(results);
     } catch (error) {
