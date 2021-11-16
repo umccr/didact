@@ -13,5 +13,6 @@ export class VisaRoute implements IRoute {
 
   private initializeRoutes() {
     this.router.get(`${this.path}`, this.visaController.getForUser);
+    this.router.get(`${this.path}/v1`, this.visaController.getV1ForUser);
   }
 }

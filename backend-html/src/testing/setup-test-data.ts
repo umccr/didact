@@ -4,6 +4,7 @@ import { getTable } from '../business/db/didact-table-utils';
 import { ApplicationEventDbType, getTypes } from '../business/db/didact-table-types';
 import { AnyEntity, Paged, Table } from 'dynamodb-onetable';
 import { DataUseLimitation } from '../../../shared-src/api-models/data-use-limitation';
+import { tengSingletons } from './setup-test-data-10g';
 
 // whilst the user management is developed
 export const PERSON_BOB = 'https://nagim.dev/p/ertyu-asrqe-34526';
@@ -147,7 +148,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       id: 'urn:fdc:thetengenomeproject.org:2018:phase1',
       name: '10g Project',
       committeeId: c2.id,
-      description: 'A subset of 10 subjects from the 1000g project',
+      description: 'A subset of 10 singleton subjects from the 1000g project',
       dataUses: [
         {
           code: { id: 'DUO:0000007', label: 'DS' },
@@ -156,56 +157,22 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       ],
     });
 
-    const mary = await DatasetSubjectDbModel.create({
-      datasetId: ds10g.id,
-      subjectId: 'SINGLETONMARY',
-      sampleIds: new Set(['HG00096']) as any,
-    });
+    let charles = undefined;
+    let mary = undefined;
+    let jane = undefined;
 
-    const bruce = await DatasetSubjectDbModel.create({
-      datasetId: ds10g.id,
-      subjectId: 'SINGLETONBRUCE',
-      sampleIds: new Set(['HG00097']) as any,
-    });
+    for (const c of tengSingletons) {
+      const s = await DatasetSubjectDbModel.create({
+        datasetId: ds10g.id,
+        subjectId: c.subjectId,
+        sampleIds: new Set(c.sampleIds) as any,
+      });
+      if (s.subjectId === 'SINGLETONCHARLES') charles = s;
+      if (s.subjectId === 'SINGLETONMARY') mary = s;
+      if (s.subjectId === 'SINGLETONJANE') jane = s;
+    }
 
-    const scott = await DatasetSubjectDbModel.create({
-      datasetId: ds10g.id,
-      subjectId: 'SINGLETONSCOTT',
-      sampleIds: new Set(['HG00099']) as any,
-    });
-
-    await DatasetSubjectDbModel.create({
-      datasetId: ds10g.id,
-      subjectId: 'SOMATICA',
-      sampleIds: new Set(['HG00100-TBD', 'HG00101-TBD']) as any,
-    });
-
-    await DatasetSubjectDbModel.create({
-      datasetId: ds10g.id,
-      subjectId: 'SOMATICB',
-      sampleIds: new Set(['HG000102-TBD']) as any,
-    });
-
-    const homer = await DatasetSubjectDbModel.create({
-      datasetId: ds10g.id,
-      familyId: 'SIMPSONS',
-      subjectId: 'TRIOHOMER',
-      sampleIds: new Set(['HG00105-TBD']) as any,
-    });
-
-    const marge = await DatasetSubjectDbModel.create({
-      datasetId: ds10g.id,
-      familyId: 'SIMPSONS',
-      subjectId: 'TRIOMARGE',
-      sampleIds: new Set(['HG00103-TBD']) as any,
-    });
-
-    const bart = await DatasetSubjectDbModel.create({
-      datasetId: ds10g.id,
-      familyId: 'SIMPSONS',
-      subjectId: 'TRIOBART',
-      sampleIds: new Set(['HG00104-TBD']) as any,
-    });
+    if (!charles || !mary || !jane) throw new Error("Didn't match subject ids to instances correctly");
 
     {
       const app10g = await ApplicationDbModel.create({
@@ -213,16 +180,19 @@ export async function setupTestData(canDestroyExistingData: boolean) {
         applicantId: PERSON_ANDREW_PATTO,
         principalInvestigatorId: PERSON_BOB,
         datasetId: ds10g.id,
-        projectTitle: 'Selective Access to Variant Data',
-        researchUseStatement: 'Can we do it',
+        projectTitle: 'Study of lissencephaly and in particular the DAG1 gene',
+        researchUseStatement: 'Lorem ispum',
+        snomed: new Set(['785299009' /*Cobblestone lissencephaly without muscular or ocular involvement*/]) as any,
+        hgnc: new Set(['HGNC:2666' /*DAG1*/]) as any,
+        // Chromosome 3: 49,468,703-49,535,618
         state: 'approved',
-        htsgetEndpoint: 'https://htsget.dev.umccr.org',
+        htsgetEndpoint: 'https://htsget-apse2.dev.umccr.org',
         readsEnabled: false,
         variantsEnabled: true,
         fhirEndpoint: 'https://fhir.dev.umccr.org',
         phenotypesEnabled: true,
-        panelappId: 221,
-        panelappVersion: '0.149',
+        panelappId: 6,
+        panelappVersion: '1.0',
         panelappMinConfidence: 2,
       });
 
@@ -232,7 +202,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
         when: new Date(2021, 4, 13, 15, 44, 21),
         byId: PERSON_ANDREW_PATTO,
         as: 'applicant',
-        detail: 'I filled in all the data',
+        detail: 'initial submission data',
       });
 
       // we should fill in more events here - but for demo purposes not needed
@@ -247,13 +217,13 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       });
       await ApplicationReleaseSubjectDbModel.create({
         applicationId: app10g.id,
-        subjectId: scott.subjectId,
-        sampleIds: Array.from(scott.sampleIds),
+        subjectId: charles.subjectId,
+        sampleIds: Array.from(charles.sampleIds),
       });
       await ApplicationReleaseSubjectDbModel.create({
         applicationId: app10g.id,
-        subjectId: bruce.subjectId,
-        sampleIds: Array.from(bruce.sampleIds),
+        subjectId: jane.subjectId,
+        sampleIds: Array.from(jane.sampleIds),
       });
     }
 
@@ -327,23 +297,13 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       });
       await ApplicationReleaseSubjectDbModel.create({
         applicationId: app10g.id,
-        subjectId: scott.subjectId,
-        sampleIds: Array.from(scott.sampleIds),
+        subjectId: jane.subjectId,
+        sampleIds: Array.from(jane.sampleIds),
       });
       await ApplicationReleaseSubjectDbModel.create({
         applicationId: app10g.id,
-        subjectId: bruce.subjectId,
-        sampleIds: Array.from(bruce.sampleIds),
-      });
-      await ApplicationReleaseSubjectDbModel.create({
-        applicationId: app10g.id,
-        subjectId: bart.subjectId,
-        sampleIds: Array.from(bart.sampleIds),
-      });
-      await ApplicationReleaseSubjectDbModel.create({
-        applicationId: app10g.id,
-        subjectId: marge.subjectId,
-        sampleIds: Array.from(marge.sampleIds),
+        subjectId: charles.subjectId,
+        sampleIds: Array.from(charles.sampleIds),
       });
     }
   }

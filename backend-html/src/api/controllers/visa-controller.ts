@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { makeCompactVisaSigned } from '../../business/services/visa/make-visa';
+import { makeCompactVisaSigned, makeJwtVisaSigned } from '../../business/services/visa/make-visa';
 import { keyDefinitions } from '../../business/services/visa/keys';
 import { getUnixTime, add } from 'date-fns';
 import cryptoRandomString from 'crypto-random-string';
@@ -35,9 +35,56 @@ export class VisaController {
         // only if we actually find some datasets should we bother making a visa
         if (visaAssertions.length > 0) {
           results.push(
-            makeCompactVisaSigned(keyDefinitions, 'https://didact-patto.dev.umccr.org', 'rfc8032-7.1-test1', subjectId, { days: 1 }, visaAssertions),
+            await makeCompactVisaSigned(
+              keyDefinitions,
+              'https://didact-patto.dev.umccr.org',
+              'rfc8032-7.1-test1',
+              subjectId,
+              { days: 1 },
+              visaAssertions,
+            ),
           );
         }
+      }
+
+      res.status(200).json(results);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public getV1ForUser = async (req: Request<unknown, unknown, unknown, URLSearchParams>, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      /*
+      not yet real endpoint mainly for testing
+      */
+      const results = [];
+
+      // rather than fail on missing subject - we want the same behaviour as an unknown subject - just
+      // fall through and return nothing
+      if (req.query.has('sub')) {
+        const subjectId = req.query.get('sub');
+
+        console.log(`Looking for approved datasets for subject ${subjectId}`);
+
+        for (const d of await applicationServiceInstance.findApprovedApplicationsInvolvedAsApplicant(subjectId))
+          results.push(
+            await makeJwtVisaSigned(
+              keyDefinitions,
+              'https://didact-patto.dev.umccr.org',
+              'rfc-rsa',
+              subjectId,
+              { days: 7 },
+              {
+                type: 'ControlledAccessGrants',
+                // this should be the date of approval..
+                asserted: 1549632872,
+                value: `http://umccr.org/release/${d}`,
+                source: 'didact',
+                by: 'dac',
+              },
+            ),
+          );
       }
 
       res.status(200).json(results);

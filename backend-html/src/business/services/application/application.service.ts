@@ -6,10 +6,16 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import Dynamo from 'dynamodb-onetable/Dynamo';
 import { AnyEntity, Paged, Table } from 'dynamodb-onetable';
 import { getTable } from '../../db/didact-table-utils';
-import { ApplicationEventDbType, ApplicationReleaseSubjectDbType, getTypes } from '../../db/didact-table-types';
-import { ApplicationApiEditableModel, ApplicationApiModel, ApplicationStateApiEnum } from '../../../../../shared-src/api-models/application';
+import { ApplicationDbType, ApplicationEventDbType, ApplicationReleaseSubjectDbType, getTypes } from '../../db/didact-table-types';
+import {
+  ApplicationApiEditableModel,
+  ApplicationApiModel,
+  ApplicationApproveApiModel,
+  ApplicationStateApiEnum,
+} from '../../../../../shared-src/api-models/application';
 import { PERSON_NAMES } from '../../../testing/setup-test-data';
 import _ from 'lodash';
+import { tengSingletons } from '../../../testing/setup-test-data-10g';
 
 class ApplicationService {
   private readonly table: Table;
@@ -201,18 +207,20 @@ class ApplicationService {
         readsEnabled: theApp.readsEnabled,
         variantsEnabled: theApp.variantsEnabled,
         phenotypesEnabled: theApp.phenotypesEnabled,
-        panelappId: theApp.panelappId.toString(),
-        panelappVersion: theApp.panelappVersion,
-        panelappMinConfidence: theApp.panelappMinConfidence,
         panelappDisplayName: 'TBD',
         htsgetEndpoint: theApp.htsgetEndpoint,
         fhirEndpoint: theApp.fhirEndpoint,
         subjects: [],
       };
+      if (theApp.panelappId && theApp.panelappVersion && theApp.panelappMinConfidence) {
+        theAppResult.release.panelappId = theApp.panelappId.toString();
+        theAppResult.release.panelappVersion = theApp.panelappVersion;
+        theAppResult.release.panelappMinConfidence = theApp.panelappMinConfidence;
+      }
       theAppResult.release.subjects = dbSubjects.map(rs => {
         return {
           subjectId: rs.subjectId,
-          sampleIds: rs.sampleIds,
+          sampleIds: Array.from(rs.sampleIds),
         };
       });
     }
@@ -275,26 +283,64 @@ class ApplicationService {
    *
    * @param applicationId the application id to approve
    * @param approverUserId the user doing the approving
+   * @param approveData the posted data indicating details of the approval
    * @return the full application model including new status and event
    */
-  public async approveApplication(applicationId: string, approverUserId: string): Promise<ApplicationApiModel> {
-    const { ApplicationDbModel, ApplicationEventDbModel } = getTypes(this.table);
+  public async approveApplication(
+    applicationId: string,
+    approverUserId: string,
+    approveData: ApplicationApproveApiModel,
+  ): Promise<ApplicationApiModel> {
+    const { ApplicationDbModel, DatasetDbModel, ApplicationReleaseSubjectDbModel, ApplicationEventDbModel } = getTypes(this.table);
+
+    const theApp = await ApplicationDbModel.get({ id: applicationId });
+
+    if (!theApp) return null;
+
+    const theDataset = await DatasetDbModel.get({ id: theApp.datasetId });
+
+    if (!theDataset) return null;
 
     const transaction = {};
-    await ApplicationDbModel.update(
-      {
-        id: applicationId,
-        state: 'approved',
-        readsEnabled: false,
-        variantsEnabled: true,
-        phenotypesEnabled: true,
-        fhirEndpoint: 'https://csiro.au/tbd',
-        htsgetEndpoint: 'https://htsget.ap-southeast-2.dev.umccr.org',
-        panelappId: 111,
-        panelappVersion: '0.211',
-      },
-      { transaction },
-    );
+
+    // whilst there are a lot of similarities - there is not a 1:1 correspondence between the Approve data we get
+    // sent and our updated db state (for instance - we need to do some basic checking)
+    // so lets make the db object
+    const dbApproveData: Partial<ApplicationDbType> = {
+      id: applicationId,
+      state: 'approved',
+      readsEnabled: approveData.readsEnabled,
+      variantsEnabled: approveData.variantsEnabled,
+      phenotypesEnabled: approveData.phenotypesEnabled,
+    };
+    if (approveData.panelappId && approveData.panelappVersion && approveData.panelappMinConfidence) {
+      dbApproveData.panelappId = approveData.panelappId;
+      dbApproveData.panelappVersion = approveData.panelappVersion;
+      dbApproveData.panelappMinConfidence = approveData.panelappMinConfidence;
+    }
+    if (approveData.phenotypesEnabled) {
+      dbApproveData.fhirEndpoint = 'https://fhir.dev.umccr.org';
+    }
+    if (approveData.readsEnabled || approveData.variantsEnabled) {
+      dbApproveData.htsgetEndpoint = 'https://htsget-apse2.dev.umccr.org';
+    }
+
+    for (const s of approveData.subjectIds) {
+      for (const reference of tengSingletons) {
+        if (s === reference.subjectId) {
+          await ApplicationReleaseSubjectDbModel.create(
+            {
+              applicationId: theApp.id,
+              subjectId: s,
+              sampleIds: new Set(reference.sampleIds) as any,
+            },
+            { transaction },
+          );
+        }
+      }
+    }
+
+    await ApplicationDbModel.update(dbApproveData, { transaction });
     await ApplicationEventDbModel.create(
       {
         as: 'committee',
@@ -319,7 +365,10 @@ class ApplicationService {
    * @return the full application model including new status and event
    */
   public async unapproveApplication(applicationId: string, unapproverUserId: string): Promise<ApplicationApiModel> {
-    const { ApplicationDbModel, ApplicationEventDbModel } = getTypes(this.table);
+    const { ApplicationDbModel, ApplicationReleaseSubjectDbModel, ApplicationEventDbModel } = getTypes(this.table);
+
+    // TODO: would need to place this inside the transaction..
+    const subs = await ApplicationReleaseSubjectDbModel.find({ applicationId: applicationId }, {});
 
     const transaction = {};
     await ApplicationDbModel.update(
@@ -329,6 +378,7 @@ class ApplicationService {
         // we need to ensure we remove any state that might have been saved from the previous approval
         fhirEndpoint: undefined,
         htsgetEndpoint: undefined,
+        phenotypesEnabled: undefined,
         readsEnabled: undefined,
         variantsEnabled: undefined,
         panelappMinConfidence: undefined,
@@ -337,7 +387,9 @@ class ApplicationService {
       },
       { transaction },
     );
-    // TODO: remove any release subject records
+    for (const s of subs) {
+      await ApplicationReleaseSubjectDbModel.remove({ applicationId: applicationId, subjectId: s.subjectId }, { transaction });
+    }
     await ApplicationEventDbModel.create(
       {
         as: 'committee',
