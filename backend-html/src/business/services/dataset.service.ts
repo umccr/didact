@@ -111,6 +111,27 @@ class DatasetService {
         if (s.familyId) {
           result.subjects[s.subjectId].familyId = s.familyId;
         }
+
+        // TODO: this is hacky - just because we can't be bothered thinking about the Dynamo storage of data
+        // use limitations = we hard code
+        if (s.subjectId == 'SINGLETONMARIA') {
+          result.subjects[s.subjectId]['dataUse'] = {
+            code: { id: 'DUO:0000007', label: 'DS' },
+            disease: { id: 'SNOMED:57838006', label: 'Retinitis pigmentosa-deafness syndrome' },
+          };
+        }
+        if (s.subjectId == 'SINGLETONDEMBO') {
+          result.subjects[s.subjectId]['dataUse'] = {
+            code: { id: 'DUO:0000007', label: 'DS' },
+            disease: { id: 'SNOMED:367591000119105', label: 'Hereditary nephropathy' },
+          };
+        }
+        if (s.subjectId == 'SINGLETONPELANI') {
+          result.subjects[s.subjectId]['dataUse'] = {
+            code: { id: 'DUO:0000007', label: 'DS' },
+            disease: { id: 'SNOMED:363235000', label: 'Hereditary disorder of nervous system' },
+          };
+        }
       }
     }
     return result;

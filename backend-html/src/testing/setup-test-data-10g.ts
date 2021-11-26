@@ -11,7 +11,6 @@ export type SingletonCase = {
     | /*mende in sierra leone*/ 'MSL';
   s3bam: string;
   s3vcf: string;
-  dul?: DataUseLimitation;
 };
 
 // #Family ID	Individual ID	Paternal ID	Maternal ID	Gender	Phenotype	Population	Relationship	Siblings	Second Order	Third Order	Children	Other Comments	phase 3 genotypes	related genotypes	omni genotypes	affy_genotypes
@@ -42,10 +41,6 @@ export const tengSingletons: SingletonCase[] = [
     population: 'GBR',
     s3bam: 's3://umccr-10g-data-dev/HG00097/HG00097.bam',
     s3vcf: 's3://umccr-10g-data-dev/HG00097/HG00097.hard-filtered.vcf.gz',
-    dul: {
-      code: { id: 'DUO:0000007', label: 'DS' },
-      disease: { id: 'SNOMED:363005004', label: 'Cardiovascular system hereditary disorder' },
-    },
   },
   {
     subjectId: 'SINGLETONJANE',

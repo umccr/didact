@@ -1,8 +1,10 @@
 import React, { useEffect, useRef } from "react";
 import { DatasetApiSubjectModel } from "../../../shared-src/api-models/dataset";
+import { DataUseTable } from "./data-use-table";
 
 type Props = {
   subjects: { [id: string]: DatasetApiSubjectModel };
+  subjectPasses: { [id: string]: boolean }
 
   selected: Set<string>;
   setSelected: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -30,11 +32,9 @@ export const SubjectsTable: React.FC<Props> = (props: Props) => {
 
   const headerClick = (e: any) => {
     if (allChecked) {
-      console.log("Doing set to nothing");
       props.setSelected(new Set());
     }
     else {
-      console.log("Doing set to all");
       props.setSelected(new Set(Object.keys(props.subjects)));
     }
 
@@ -73,6 +73,9 @@ export const SubjectsTable: React.FC<Props> = (props: Props) => {
           </th>
           <th scope="col"
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sample Ids</th>
+          <th scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DUO <br />
+            <span className="text-xs">(override)</span></th>
         </tr>
       </thead>
       <tbody  className="bg-white divide-y divide-gray-200">
@@ -89,6 +92,7 @@ export const SubjectsTable: React.FC<Props> = (props: Props) => {
               <td  className="px-6 py-4 whitespace-nowrap" onClick={() => itemClick(subjectId)}>{subjectId}</td>
               <td  className="px-6 py-4 whitespace-nowrap">{subject.familyId}</td>
               <td  className="px-6 py-4 whitespace-nowrap">{JSON.stringify(subject.sampleIds)}</td>
+              <td  className="px-6 py-4 whitespace-nowrap">{subject.dataUse && <DataUseTable dataUse={subject.dataUse} showChecked={true} checked={props.subjectPasses[subjectId]} />}</td>
             </tr>
           ))}
       </tbody>

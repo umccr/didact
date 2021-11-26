@@ -28,7 +28,9 @@ type Props = {
 };
 
 type Evaluation = {
-  messages: string[];
+  overallPasses: boolean[];
+
+  subjectPasses: { [id: string]: boolean }
 };
 
 export const ApplicationEditCommitteeSection: React.FC<Props> = ({
@@ -104,46 +106,70 @@ export const ApplicationEditCommitteeSection: React.FC<Props> = ({
     await queryClient.invalidateQueries(APPLICATION_EDIT_QUERY_NAME);
   };
 
+  const [evaluateState, setEvaluateState] = useState<Evaluation>({ overallPasses: [], subjectPasses: {}});
 
+  const evaluateDataUse = async (du: DataUseLimitation): Promise<boolean> => {
+    //console.log(`Evaluating ${JSON.stringify(du)}`);
+    //const messages: string[] = [];
 
-  const [evaluateState, setEvaluateState] = useState<Evaluation[]>([]);
+    // we know how to check disease state
+    if (du.code?.id === "DUO:0000007") {
+      const ds = (du as any).disease.id;
+      if (ds.startsWith("SNOMED:")) {
+        const datasetSnomed = ds.substr(7);
+
+        for (const entry of Object.entries(snomed)) {
+          const applicationSnomed = entry[1].id;
+          //const applicationSnomedName = entry[1].name;
+          const ontoResult = await axios
+            .get<any>(
+              `https://r4.ontoserver.csiro.au/fhir/CodeSystem/$subsumes?system=http://snomed.info/sct&codeA=${datasetSnomed}&codeB=${applicationSnomed}`
+            );
+
+            for (const r of ontoResult.data?.parameter || []) {
+              if (r?.name === "outcome") {
+                if (r?.valueCode === "subsumes")
+                  return true;
+              }
+            }
+        }
+      }
+    }
+
+    return false;
+  }
 
   const evaluateClick = async () => {
-    const newEvaluateState: Evaluation[] = [];
+    const newEvaluateState: Evaluation = { overallPasses: [], subjectPasses: {}};
 
+    let all = true;
+    let index = 0;
     for (const du of dataUses) {
-      console.log(`Evaluating ${JSON.stringify(du)}`);
-      const messages: string[] = [];
+      const duResult = await evaluateDataUse(du);
+      newEvaluateState.overallPasses[index] = duResult;
+      if (!duResult)
+        all = false;
+      index++;
+    }
 
-      // we know how to check disease state
-      if (du.code?.id === "DUO:0000007") {
-        const ds = (du as any).disease.id;
-        if (ds.startsWith("SNOMED:")) {
-          const datasetSnomed = ds.substr(7);
+    // only if all the dataset usages passes do we bother with the subject levels
+    if (all) {
+      const passes = new Set<string>([]);
 
-          for (const entry of Object.entries(snomed)) {
-            const applicationSnomed = entry[1].id;
-            const applicationSnomedName = entry[1].name;
-            await axios
-              .get<any>(
-                `https://r4.ontoserver.csiro.au/fhir/CodeSystem/$subsumes?system=http://snomed.info/sct&codeA=${datasetSnomed}&codeB=${applicationSnomed}`
-              )
-              .then((result) => {
-                for (const r of result.data?.parameter || []) {
-                  if (r?.name === "outcome") {
-                    if (r?.valueCode === "subsumes")
-                      messages.push(`✅ ${applicationSnomedName}`);
-                    else messages.push(`🚫 ${applicationSnomedName}`);
-                  }
-                }
-              });
-          }
+      for (const [id, subject] of Object.entries(subjects)) {
+        if (subject.dataUse) {
+          const subjectDuResult = await evaluateDataUse(subject.dataUse);
+          newEvaluateState.subjectPasses[id] = subjectDuResult;
+          if (subjectDuResult)
+            passes.add(id);
+        }
+        else {
+          passes.add(id);
+
         }
       }
 
-      newEvaluateState.push({
-        messages: messages,
-      });
+      setSubjectsSelected(passes);
     }
 
     setEvaluateState(newEvaluateState);
@@ -166,28 +192,29 @@ export const ApplicationEditCommitteeSection: React.FC<Props> = ({
 
         {!applicationData.release && (
           <>
-            {/*<LabelledContent label="Dataset Usage Restrictions">
-              <div className="space-y-4 w-1/2">
-                {dataUses.map((du, index) => (
-                  <DataUseTable key={index} dataUse={du} />
-                ))}
-              </div>
-            </LabelledContent> */}
-
             <LabelledContent label="Dataset Usage Evaluator">
+              <div className="px-8 space-y-4">
+              <p>
+                Application will be evaluated against overall data set restrictions and individual subject restrictions (NOTE: Only DS is currently evaluated)
+              </p>
+              <ul className="list-disc">
+                {Object.values(snomed).map((concept) => <li>{concept.name}</li>)}
+              </ul>
               <button
                 onClick={evaluateClick}
                 className={classnames("btn", "btn-blue", "w-32")}
               >
                 Evaluate
               </button>
-              {evaluateState && evaluateState.length > 0 && (
+              <hr/>
+              </div>
+              {/*{evaluateState && evaluateState.length > 0 && (
                 <div className="grid grid-cols-3 gap-6 mt-2">
                   {dataUses.map((du, index) => (
                     <>
                       <div key={index} className="col-span-1">
                         Evaluating against DUO <br />
-                        <DataUseTable dataUse={du} />
+                        <DataUseTable dataUse={du} showChecked={true} />
                       </div>
                       <div className="col-span-2">
                         {evaluateState[index].messages.map((msg) => (
@@ -197,12 +224,21 @@ export const ApplicationEditCommitteeSection: React.FC<Props> = ({
                     </>
                   ))}
                 </div>
-              )}
+              )} */}
+            </LabelledContent>
+
+            <LabelledContent label="Dataset Usage Restrictions">
+              <div className="space-y-4 w-1/2">
+                {dataUses.map((du, index) => (
+                  <DataUseTable key={index} dataUse={du} showChecked={true} checked={evaluateState.overallPasses[index]} />
+                ))}
+              </div>
             </LabelledContent>
 
             <LabelledContent label="Subject Restrictions">
               <SubjectsTable
                 subjects={subjects}
+                subjectPasses={evaluateState.subjectPasses}
                 selected={subjectsSelected}
                 setSelected={setSubjectsSelected}
               />

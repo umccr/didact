@@ -42,7 +42,7 @@ const DatasetDiv: React.FC<DatasetDivProps> = ({ dataset }) => {
             <dd className="text-sm text-gray-900 sm:mt-0 sm:col-span-5">
               <div className="flex justify-start space-x-4">
                 {dataset.dataUses.map((du, index) => (
-                  <DataUseTable key={index} dataUse={du} />
+                  <DataUseTable key={index} dataUse={du} showChecked={false} />
                 ))}
               </div>
             </dd>

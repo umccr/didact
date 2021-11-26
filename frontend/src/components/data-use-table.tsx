@@ -16,6 +16,13 @@ import {
 
 type Props = {
   dataUse: DataUseLimitation;
+
+  // if true tells it to show the associated check section UI - noting
+  // the check section renders tri-state (yes, no, empty)
+  showChecked: boolean;
+
+  // render an associated tick or cross with given value, or empty for undefined
+  checked?: boolean;
 };
 
 /**
@@ -69,6 +76,7 @@ export const DataUseTable: React.FC<Props> = (props: Props) => {
         <tr>
           <td width={32}>{dataUseIcon}</td>
           <td>{props.dataUse.code?.label}</td>
+          <td>{props.dataUse.code?.id === "DUO:0000007" && <span>=</span>}</td>
           <td>
             {props.dataUse.code?.id === "DUO:0000007" && (
               <span>
@@ -79,6 +87,10 @@ export const DataUseTable: React.FC<Props> = (props: Props) => {
               </span>
             )}
           </td>
+          <td>
+            {props.showChecked && props.checked && <span>✅</span> }
+            {props.showChecked && props.checked === false && <span>❌</span> }
+          </td>
         </tr>
       </thead>
       <tbody>
@@ -87,6 +99,10 @@ export const DataUseTable: React.FC<Props> = (props: Props) => {
             <tr key={index}>
               <td></td>
               <td>{m.code?.label}</td>
+              <td>
+                {(m.code?.id === "DUO:0000028" ||
+                  m.code?.id === "DUO:0000025") && <span>=</span>}
+              </td>
               <td>
                 {m.code?.id === "DUO:0000028" &&
                   (m as DataUseModifierSpecificInstitution).institutes &&
@@ -97,6 +113,7 @@ export const DataUseTable: React.FC<Props> = (props: Props) => {
                   <span>{(m as DataUseModifierTimeLimit).start}</span>
                 )}
               </td>
+              <td></td>
             </tr>
           ))}
       </tbody>

@@ -14,4 +14,5 @@ export type DatasetApiModel = {
 export type DatasetApiSubjectModel = {
     sampleIds: string[];
     familyId?: string;
+    dataUse?: DataUseLimitation;
 }

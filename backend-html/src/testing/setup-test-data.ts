@@ -1,7 +1,7 @@
 import Dynamo from 'dynamodb-onetable/Dynamo';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { getTable } from '../business/db/didact-table-utils';
-import { ApplicationEventDbType, getTypes } from '../business/db/didact-table-types';
+import { DatasetSubjectDbType, getTypes } from '../business/db/didact-table-types';
 import { AnyEntity, Paged, Table } from 'dynamodb-onetable';
 import { DataUseLimitation } from '../../../shared-src/api-models/data-use-limitation';
 import { tengSingletons } from './setup-test-data-10g';
@@ -14,6 +14,8 @@ export const PERSON_ANDREW_GMAIL = 'https://nagim.dev/p/kfuus-aodnv-10000';
 export const PERSON_ANDREW_PATTO = 'https://nagim.dev/p/txtpo-yhphm-10000';
 export const PERSON_DENIS_BAUER = 'https://nagim.dev/p/mbcxw-bpjwv-10000';
 export const PERSON_YATISH_JAIN = 'https://nagim.dev/p/iryba-kskqa-10000';
+export const PERSON_JOHN_GRIMES = 'https://nagim.dev/p/xkdpb-aozob-10000';
+export const PERSON_STEPHANIE_TONG = 'https://nagim.dev/p/mtdsh-mmjby-10000';
 
 // these will need to come from some sort of LDAP sync in reality
 export const PERSON_NAMES = {
@@ -24,6 +26,8 @@ export const PERSON_NAMES = {
   [PERSON_BOB]: 'Bob Wiseman',
   [PERSON_DENIS_BAUER]: 'Denis Bauer',
   [PERSON_YATISH_JAIN]: 'Yatish Jain',
+  [PERSON_JOHN_GRIMES]: 'John Grimes',
+  [PERSON_STEPHANIE_TONG]: 'Stephanie Tong',
 };
 
 async function anyData(t: Table): Promise<boolean> {
@@ -157,75 +161,36 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       ],
     });
 
-    let charles = undefined;
-    let mary = undefined;
-    let jane = undefined;
+    const people: { [a: string]: DatasetSubjectDbType } = {};
 
     for (const c of tengSingletons) {
-      const s = await DatasetSubjectDbModel.create({
+      people[c.subjectId] = await DatasetSubjectDbModel.create({
         datasetId: ds10g.id,
         subjectId: c.subjectId,
         sampleIds: new Set(c.sampleIds) as any,
       });
-      if (s.subjectId === 'SINGLETONCHARLES') charles = s;
-      if (s.subjectId === 'SINGLETONMARY') mary = s;
-      if (s.subjectId === 'SINGLETONJANE') jane = s;
     }
 
-    if (!charles || !mary || !jane) throw new Error("Didn't match subject ids to instances correctly");
-
-    {
-      const app10g = await ApplicationDbModel.create({
-        id: '8XZF4195109CIIERC35P577HAM',
-        applicantId: PERSON_ANDREW_PATTO,
-        principalInvestigatorId: PERSON_BOB,
-        datasetId: ds10g.id,
-        projectTitle: 'Study of lissencephaly and in particular the DAG1 gene',
-        researchUseStatement: 'Lorem ispum',
-        snomed: new Set(['785299009' /*Cobblestone lissencephaly without muscular or ocular involvement*/]) as any,
-        hgnc: new Set(['HGNC:2666' /*DAG1*/]) as any,
-        // Chromosome 3: 49,468,703-49,535,618
-        state: 'approved',
-        htsgetEndpoint: 'https://htsget-apse2.dev.umccr.org',
-        readsEnabled: false,
-        variantsEnabled: true,
-        fhirEndpoint: 'https://fhir.dev.umccr.org',
-        phenotypesEnabled: true,
-        panelappId: 6,
-        panelappVersion: '1.0',
-        panelappMinConfidence: 2,
-      });
-
-      await ApplicationEventDbModel.create({
-        applicationId: app10g.id,
-        action: 'create',
-        when: new Date(2021, 4, 13, 15, 44, 21),
-        byId: PERSON_ANDREW_PATTO,
-        as: 'applicant',
-        detail: 'initial submission data',
-      });
-
-      // we should fill in more events here - but for demo purposes not needed
-
-      // we put this application into an automatically approved state
-      // and include dataset details (that we would have built on approval by
-      // querying gen3 etc)
-      await ApplicationReleaseSubjectDbModel.create({
-        applicationId: app10g.id,
-        subjectId: mary.subjectId,
-        sampleIds: Array.from(mary.sampleIds),
-      });
-      await ApplicationReleaseSubjectDbModel.create({
-        applicationId: app10g.id,
-        subjectId: charles.subjectId,
-        sampleIds: Array.from(charles.sampleIds),
-      });
-      await ApplicationReleaseSubjectDbModel.create({
-        applicationId: app10g.id,
-        subjectId: jane.subjectId,
-        sampleIds: Array.from(jane.sampleIds),
-      });
-    }
+    await makeReleasedDataset(table, '8XZF4195109CIIERC35P577HAM', PERSON_ANDREW_PATTO, ds10g.id, people, [
+      'SINGLETONCHARLES',
+      'SINGLETONMARY',
+      'SINGLETONJANE',
+    ]);
+    await makeReleasedDataset(table, '1AAC4S95109XIIERC35P577OOO', PERSON_YATISH_JAIN, ds10g.id, people, [
+      'SINGLETONCHARLES',
+      'SINGLETONMARY',
+      'SINGLETONJANE',
+    ]);
+    await makeReleasedDataset(table, 'GGVDESNG509XTTTGH35P5AUR32', PERSON_STEPHANIE_TONG, ds10g.id, people, [
+      'SINGLETONCHARLES',
+      'SINGLETONMARY',
+      'SINGLETONJANE',
+    ]);
+    await makeReleasedDataset(table, 'PLWEQ951G0965YERC35P534MNB', PERSON_JOHN_GRIMES, ds10g.id, people, [
+      'SINGLETONCHARLES',
+      'SINGLETONMARY',
+      'SINGLETONJANE',
+    ]);
 
     {
       const partialApp10g = await ApplicationDbModel.create({
@@ -235,11 +200,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
         datasetId: ds10g.id,
         projectTitle: 'A Partial Application for 10G Data',
         researchUseStatement: 'This application is for research into ...',
-        snomed: new Set([
-          '718212006' /*TMEM70 related mitochondrial encephalo-cardio-myopathy*/,
-          '126488004' /*cancer of skin*/,
-          '472315005' /* mitocondrial cardiomyopathy*/,
-        ]) as any,
+        snomed: new Set(['785299009' /*Cobblestone lissencephaly without muscular or ocular involvement*/]) as any,
         hgnc: new Set(['HGNC:123']) as any,
         state: 'submitted',
       });
@@ -251,59 +212,6 @@ export async function setupTestData(canDestroyExistingData: boolean) {
         byId: PERSON_ANDREW_PATTO,
         as: 'applicant',
         detail: 'I filled in all the data',
-      });
-    }
-
-    // a CSIRO specific application
-    {
-      const app10g = await ApplicationDbModel.create({
-        id: '1AAC4S95109XIIERC35P577OOO',
-        applicantId: PERSON_YATISH_JAIN,
-        principalInvestigatorId: PERSON_DENIS_BAUER,
-        datasetId: ds10g.id,
-        projectTitle: 'An Examination of 10 Samples by CSIRO',
-        researchUseStatement: 'RUS',
-        snomed: new Set(['718212006' /*TMEM70 related mitochondrial encephalo-cardio-myopathy*/]) as any,
-        hgnc: new Set(['HGNC:123']) as any,
-        state: 'approved',
-        htsgetEndpoint: 'https://htsget-apse2.dev.umccr.org',
-        readsEnabled: false,
-        variantsEnabled: true,
-        fhirEndpoint: 'https://fhir.dev.umccr.org',
-        phenotypesEnabled: true,
-        panelappId: 221,
-        panelappVersion: '0.149',
-        panelappMinConfidence: 3,
-      });
-
-      await ApplicationEventDbModel.create({
-        applicationId: app10g.id,
-        action: 'create',
-        when: new Date(2021, 4, 13, 15, 44, 21),
-        byId: PERSON_YATISH_JAIN,
-        as: 'applicant',
-        detail: 'I filled in all the data',
-      });
-
-      // we should fill in more events here - but for demo purposes not needed
-
-      // we put this application into an automatically approved state
-      // and include dataset details (that we would have built on approval by
-      // querying gen3 etc)
-      await ApplicationReleaseSubjectDbModel.create({
-        applicationId: app10g.id,
-        subjectId: mary.subjectId,
-        sampleIds: Array.from(mary.sampleIds),
-      });
-      await ApplicationReleaseSubjectDbModel.create({
-        applicationId: app10g.id,
-        subjectId: jane.subjectId,
-        sampleIds: Array.from(jane.sampleIds),
-      });
-      await ApplicationReleaseSubjectDbModel.create({
-        applicationId: app10g.id,
-        subjectId: charles.subjectId,
-        sampleIds: Array.from(charles.sampleIds),
       });
     }
   }
@@ -410,6 +318,53 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       byId: PERSON_BOB,
       as: 'applicant',
       detail: 'was good',
+    });
+  }
+}
+
+async function makeReleasedDataset(t: Table, id: string, applicantId: string, datasetId: string, peopleDict: any, peopleAllowed: string[]) {
+  const { ApplicationDbModel, ApplicationEventDbModel, ApplicationReleaseSubjectDbModel } = getTypes(t);
+
+  const app10g = await ApplicationDbModel.create({
+    id: id,
+    applicantId: applicantId,
+    principalInvestigatorId: applicantId,
+    datasetId: datasetId,
+    projectTitle: 'Study of lissencephaly and in particular the DAG1 gene',
+    researchUseStatement: 'Lorem ispum',
+    snomed: new Set(['785299009' /*Cobblestone lissencephaly without muscular or ocular involvement*/]) as any,
+    hgnc: new Set(['HGNC:2666' /*DAG1*/]) as any,
+    // Chromosome 3: 49,468,703-49,535,618
+    state: 'approved',
+    htsgetEndpoint: 'https://htsget-apse2.dev.umccr.org',
+    readsEnabled: false,
+    variantsEnabled: true,
+    fhirEndpoint: 'https://fhir.dev.umccr.org',
+    phenotypesEnabled: true,
+    panelappId: 6,
+    panelappVersion: '1.0',
+    panelappMinConfidence: 2,
+  });
+
+  await ApplicationEventDbModel.create({
+    applicationId: app10g.id,
+    action: 'create',
+    when: new Date(2021, 4, 13, 15, 44, 21),
+    byId: applicantId,
+    as: 'applicant',
+    detail: 'initial submission data',
+  });
+
+  // we should fill in more events here - but for demo purposes not needed
+
+  // we put this application into an automatically approved state
+  // and include dataset details (that we would have built on approval by
+  // querying gen3 etc)
+  for (const p of peopleAllowed) {
+    await ApplicationReleaseSubjectDbModel.create({
+      applicationId: app10g.id,
+      subjectId: p,
+      sampleIds: Array.from(peopleDict[p].sampleIds),
     });
   }
 }
