@@ -64,15 +64,13 @@ export const SubjectsTable: React.FC<Props> = (props: Props) => {
             />
           </th>
           <th scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject Id</th>
-          <th scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject Id<br/>Sample Ids</th>
+          {/*<th scope="col"
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
             Family Id
             <br />
             <span className="text-xs">(if part of family)</span>
-          </th>
-          <th scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sample Ids</th>
+          </th> */}
           <th scope="col"
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DUO <br />
             <span className="text-xs">(override)</span></th>
@@ -89,9 +87,8 @@ export const SubjectsTable: React.FC<Props> = (props: Props) => {
                   onClick={() => itemClick(subjectId)}
                 />
               </td>
-              <td  className="px-6 py-4 whitespace-nowrap" onClick={() => itemClick(subjectId)}>{subjectId}</td>
-              <td  className="px-6 py-4 whitespace-nowrap">{subject.familyId}</td>
-              <td  className="px-6 py-4 whitespace-nowrap">{JSON.stringify(subject.sampleIds)}</td>
+              <td  className="px-6 py-4 whitespace-nowrap" onClick={() => itemClick(subjectId)}>{subjectId}<br/>{JSON.stringify(subject.sampleIds)}</td>
+              {/*<td  className="px-6 py-4 whitespace-nowrap">{subject.familyId}</td>*/}
               <td  className="px-6 py-4 whitespace-nowrap">{subject.dataUse && <DataUseTable dataUse={subject.dataUse} showChecked={true} checked={props.subjectPasses[subjectId]} />}</td>
             </tr>
           ))}

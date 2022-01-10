@@ -319,7 +319,7 @@ class ApplicationService {
       dbApproveData.panelappMinConfidence = approveData.panelappMinConfidence;
     }
     if (approveData.phenotypesEnabled) {
-      dbApproveData.fhirEndpoint = 'https://fhir.dev.umccr.org';
+      dbApproveData.fhirEndpoint = 'https://nagim.pathling.app';
     }
     if (approveData.readsEnabled || approveData.variantsEnabled) {
       dbApproveData.htsgetEndpoint = 'https://htsget-apse2.dev.umccr.org';

@@ -15,6 +15,12 @@ const EXCHANGE_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:token-exchange';
 const TOKEN_TYPE_GA4GH_COMPACT = 'urn:ga4gh:token-type:compact-passport';
 const TOKEN_TYPE_IETF_ACCESS = 'urn:ietf:params:oauth:token-type:access_token';
 
+// for our demo ecosystem we need to build a permanent stable issuers - here is our choice for where this
+// is deployed.. a real ecosystem wouldn't work like this..
+const BROKER_ISSUER = 'https://broker.nagim.dev';
+const VISA_DAC_ISSUER = 'https://didact-nagim.dev.umccr.org';
+const VISA_BROKER_ISSUER = 'https://broker.nagim.dev';
+
 /**
  * A temporary endpoint that acts to re-sign access JWTs from CILogon, but instead
  * with passports inside.
@@ -100,13 +106,13 @@ export class BrokerRoute implements IRoute {
           },
         };
 
-        // this is cheating slightly.. a real broker should possibly be going off via https to talk to other visa issuers
+        // this is cheating slightly... a real broker should possibly be going off via https to talk to other visa issuers
         // in this case we are just looking up a db in the same account
         {
           const didactJwt = await getDidactJwtVisas(subjectId);
           const didactCompact = await getDidactCompactVisa(subjectId);
 
-          if (didactJwt) claims.ga4gh_passport_v1.push(didactJwt);
+          if (didactJwt) claims.ga4gh_passport_v1.push(...didactJwt);
           if (didactCompact) claims.ga4gh_passport_v2.visas.push(didactCompact);
         }
 
@@ -115,7 +121,7 @@ export class BrokerRoute implements IRoute {
           const nagimJwt = await getNagimJwtVisas(subjectId, searchResult[0]);
           const nagimCompact = await getNagimCompactVisa(subjectId, searchResult[0]);
 
-          if (nagimJwt) claims.ga4gh_passport_v1.push(nagimJwt);
+          if (nagimJwt) claims.ga4gh_passport_v1.push(...nagimJwt);
           if (nagimCompact) claims.ga4gh_passport_v2.visas.push(nagimCompact);
         }
 
@@ -127,7 +133,7 @@ export class BrokerRoute implements IRoute {
           .setProtectedHeader({ alg: 'RS256', typ: 'JWT', kid: 'rfc-rsa' })
           .setSubject(subjectId)
           .setIssuedAt()
-          .setIssuer('https://broker.nagim.dev')
+          .setIssuer(BROKER_ISSUER)
           .setExpirationTime('365d')
           .setJti(cryptoRandomString({ length: 16, type: 'alphanumeric' }));
 
@@ -213,7 +219,7 @@ async function getDidactCompactVisa(subjectId: string): Promise<any | null> {
   console.log(`Looking for approved datasets for ${subjectId} resulted in visa assertions '${visaAssertions}'`);
 
   return visaAssertions.length > 0
-    ? makeCompactVisaSigned(keyDefinitions, 'https://didact-patto.dev.umccr.org', 'rfc8032-7.1-test1', subjectId, { days: 1 }, visaAssertions)
+    ? makeCompactVisaSigned(keyDefinitions, VISA_DAC_ISSUER, 'rfc8032-7.1-test1', subjectId, { days: 90 }, visaAssertions)
     : null;
 }
 
@@ -230,10 +236,10 @@ async function getDidactJwtVisas(subjectId: string): Promise<string[] | null> {
     resultVisas.push(
       await makeJwtVisaSigned(
         keyDefinitions,
-        'https://didact-patto.dev.umccr.org',
+        VISA_DAC_ISSUER,
         'rfc-rsa',
         subjectId,
-        { days: 1 },
+        { days: 90 },
         {
           ga4gh_visa_v1: {
             type: 'ControlledAccessGrants',
@@ -264,7 +270,7 @@ async function getNagimCompactVisa(subjectId: string, ldapPerson: any): Promise<
   console.log(`Looking for trusted researcher status for ${subjectId} resulted in visa assertions '${visaAssertions}'`);
 
   return visaAssertions.length > 0
-    ? makeCompactVisaSigned(keyDefinitions, 'https://broker.nagim.dev', 'rfc8032-7.1-test1', subjectId, { days: 30 }, visaAssertions)
+    ? makeCompactVisaSigned(keyDefinitions, VISA_BROKER_ISSUER, 'rfc8032-7.1-test1', subjectId, { days: 30 }, visaAssertions)
     : null;
 }
 
@@ -275,10 +281,10 @@ async function getNagimJwtVisas(subjectId: string, ldapPerson: any): Promise<str
     return [
       await makeJwtVisaSigned(
         keyDefinitions,
-        'https://broker.nagim.dev',
+        VISA_BROKER_ISSUER,
         'rfc-rsa',
         subjectId,
-        { days: 30 },
+        { days: 90 },
         {
           ga4gh_visa_v1: {
             type: 'ResearcherStatus',

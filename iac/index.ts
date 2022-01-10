@@ -2,7 +2,7 @@ import { DidactWebSite } from "./constructs/didact-web-site";
 import { App, CfnParameter, Stack, StackProps } from "aws-cdk-lib";
 
 class DidactStack extends Stack {
-  constructor(parent: App, name: string, props: StackProps) {
+  constructor(parent: App, name: string, installBroker: boolean, props: StackProps) {
     super(parent, name, props);
 
     // build number is passed in from the launching CLI context
@@ -245,6 +245,7 @@ class DidactStack extends Stack {
       oidcLoginHostParam,
       oidcLoginClientIdParam,
       oidcLoginClientSecretParam,
+      installBroker,
       brokerCertificateArnParam,
       brokerNameHostParam,
       brokerNameDomainParam,
@@ -263,7 +264,7 @@ const app = new App();
 
 if (process.env.CI === "true") {
   // in the CI process, we are building a environment agnostic CFN script
-  new DidactStack(app, STACK_BASE_NAME, {});
+  new DidactStack(app, STACK_BASE_NAME, false, {});
 } else {
   // otherwise, we are in a dev environment and building a per-dev stack for actual deployment
   // we need to determine a 'per-dev' name so that our stacks don't clash
@@ -275,7 +276,7 @@ if (process.env.CI === "true") {
 
   const dev = process.env.UMCCR_DEVELOPER;
 
-  new DidactStack(app, [STACK_BASE_NAME, dev].join("-"), {
+  new DidactStack(app, [STACK_BASE_NAME, dev].join("-"), dev.includes("nagim"),{
     env: {
       region: "ap-southeast-2",
       // the dev stack can only be deployed directly by CDK into the dev account

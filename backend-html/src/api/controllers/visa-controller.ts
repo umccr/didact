@@ -6,6 +6,15 @@ import cryptoRandomString from 'crypto-random-string';
 import { applicationServiceInstance } from '../../business/services/application/application.service';
 import { URLSearchParams } from 'url';
 
+/**
+ * This is an endpoint that would be in use *if* CILogon was fetching
+ * visas.. because they are not - we have our own implementation of the
+ * broker that does this directly..
+ *
+ * Need to revisit as this progresses
+ */
+const US_AS_ISSUER = 'https://didact-patto.dev.umccr.org';
+
 export class VisaController {
   /**
    * API call to retrieve visas for a particular subject id.
@@ -34,16 +43,7 @@ export class VisaController {
 
         // only if we actually find some datasets should we bother making a visa
         if (visaAssertions.length > 0) {
-          results.push(
-            await makeCompactVisaSigned(
-              keyDefinitions,
-              'https://didact-patto.dev.umccr.org',
-              'rfc8032-7.1-test1',
-              subjectId,
-              { days: 1 },
-              visaAssertions,
-            ),
-          );
+          results.push(await makeCompactVisaSigned(keyDefinitions, US_AS_ISSUER, 'rfc8032-7.1-test1', subjectId, { days: 1 }, visaAssertions));
         }
       }
 
@@ -71,7 +71,7 @@ export class VisaController {
           results.push(
             await makeJwtVisaSigned(
               keyDefinitions,
-              'https://didact-patto.dev.umccr.org',
+              US_AS_ISSUER,
               'rfc-rsa',
               subjectId,
               { days: 7 },
@@ -105,21 +105,17 @@ export class VisaController {
       const results = [];
 
       // make visas representing the test vector input of the various RFCs (to check signatures are right)
-      results.push(
-        makeCompactVisaSigned(keyDefinitions, 'https://didact-patto.dev.umccr.org', 'rfc8032-7.1-test1', 'subjecta', { hours: 1 }, ['a:b']),
-      );
-      results.push(
-        makeCompactVisaSigned(keyDefinitions, 'https://didact-patto.dev.umccr.org', 'rfc8032-7.1-test2', 'subjectb', { hours: 1 }, ['test:assert']),
-      );
+      results.push(makeCompactVisaSigned(keyDefinitions, US_AS_ISSUER, 'rfc8032-7.1-test1', 'subjecta', { hours: 1 }, ['a:b']));
+      results.push(makeCompactVisaSigned(keyDefinitions, US_AS_ISSUER, 'rfc8032-7.1-test2', 'subjectb', { hours: 1 }, ['test:assert']));
 
       // make some more realistic actual visas
       results.push(
-        makeCompactVisaSigned(keyDefinitions, 'https://didact-patto.dev.umccr.org', 'rfc8032-7.1-test1', 'subjectc', { hours: 1 }, [
+        makeCompactVisaSigned(keyDefinitions, US_AS_ISSUER, 'rfc8032-7.1-test1', 'subjectc', { hours: 1 }, [
           `c:urn:fdc:australiangenomics.org.au:2018:study/1`,
         ]),
       );
       results.push(
-        makeCompactVisaSigned(keyDefinitions, 'https://didact-patto.dev.umccr.org', 'rfc8032-7.1-test1', 'subjectd', { hours: 1 }, [
+        makeCompactVisaSigned(keyDefinitions, US_AS_ISSUER, 'rfc8032-7.1-test1', 'subjectd', { hours: 1 }, [
           'r:https://doi.org/10.1038/s41431-018-0219-y',
         ]),
       );

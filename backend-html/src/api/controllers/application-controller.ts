@@ -181,8 +181,8 @@ export class ApplicationController {
             for (const sampleId of releaseSubject.sampleIds) {
               htsget.samples[sampleId] = {};
               // TODO: the logic of how these paths are formed needs to be done
-              if (application.release.variantsEnabled) htsget.samples[sampleId].variantsPath = `/variants/10g/https/${sampleId}`;
-              if (application.release.readsEnabled) htsget.samples[sampleId].readsPath = `/reads/10g/https/${sampleId}`;
+              if (application.release.variantsEnabled) htsget.samples[sampleId].variantsPath = `/variants/${applicationId}/10g/vcf/${sampleId}`;
+              if (application.release.readsEnabled) htsget.samples[sampleId].readsPath = `/reads/10g/${applicationId}/bam/${sampleId}`;
             }
 
             manifest.htsgetArtifacts[releaseSubject.subjectId] = htsget;

@@ -30,6 +30,7 @@ export interface StaticSiteProps {
   oidcLoginClientIdParam: CfnParameter;
   oidcLoginClientSecretParam: CfnParameter;
 
+  installBroker: boolean;
   brokerCertificateArnParam: CfnParameter;
   brokerNameHostParam: CfnParameter;
   brokerNameDomainParam: CfnParameter;
@@ -118,6 +119,7 @@ export class DidactWebSite extends Construct {
       targetDefault: functionConstruct.function,
     });
 
+    if (props.installBroker)
     {
       const brokerFunctionConstruct = new EcrBasedLambdaFunction(
         this,

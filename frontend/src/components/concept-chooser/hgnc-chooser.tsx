@@ -22,10 +22,10 @@ type Props = {
 export const HgncChooser: React.FC<Props> = ({ selected, setSelected, setIsDirty, disabled }) => {
   return (
     <ConceptChooser
-      ontoServerUrl="https://genomics.ontoserver.csiro.au/fhir"
-      systemUri="http://www.genenames.org"
-      systemVersion="http://www.genenames.org|20100712"
-      rootConceptId="HP:0000118"
+      ontoServerUrl="https://r4.ontoserver.csiro.au/fhir"
+      systemUri="http://www.genenames.org/geneId"
+      systemVersion="http://www.genenames.org/geneId|2021-10-04"
+      rootConceptId="xxx"
       label="Gene Specific Study"
       placeholder="e.g. SHOX2, AATF"
       codePrefix="HGNC"

@@ -103,7 +103,11 @@ export const App: React.FC = () => {
             headers: { "content-type": "application/x-www-form-urlencoded" },
           }
         );
+        console.log("Response");
+        console.log(passportExchange);
         const passportJwt = passportExchange.data.access_token;
+        console.log("Passport JWT");
+        console.log(passportJwt);
         // note: this is a decode NOT A VERIFY.. but we don't really use
         // these claims for anything important (if at all)
         const passportContent = oktaAuth.token.decode(passportJwt);

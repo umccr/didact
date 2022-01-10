@@ -128,6 +128,9 @@ export const ApplicationNewPage: React.FC = () => {
                       <div className="mt-1 flex rounded-md shadow-sm">
                         {/* TODO: replace with sourcing this from backend */}
                         <select id="data-set-id" {...register("datasetId")}>
+                          <option value="urn:fdc:thetengenomeproject.org:2018:phase1">
+                            10g Project
+                          </option>
                           <option value="urn:fdc:australiangenomics.org.au:2018:study/1">
                             Mitochondrial Flagship
                           </option>
@@ -136,9 +139,6 @@ export const ApplicationNewPage: React.FC = () => {
                           </option>
                           <option value="urn:fdc:australiangenomics.org.au:2018:study/3">
                             Cancer Flagship
-                          </option>
-                          <option value="urn:fdc:thetengenomeproject.org:2018:phase1">
-                            10g Project
                           </option>
                         </select>
                       </div>

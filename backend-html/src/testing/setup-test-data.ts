@@ -16,6 +16,7 @@ export const PERSON_DENIS_BAUER = 'https://nagim.dev/p/mbcxw-bpjwv-10000';
 export const PERSON_YATISH_JAIN = 'https://nagim.dev/p/iryba-kskqa-10000';
 export const PERSON_JOHN_GRIMES = 'https://nagim.dev/p/xkdpb-aozob-10000';
 export const PERSON_STEPHANIE_TONG = 'https://nagim.dev/p/mtdsh-mmjby-10000';
+export const PERSON_OLIVER_HOFMANN = 'https://nagim.dev/p/ibfjw-bjjrd-10000';
 
 // these will need to come from some sort of LDAP sync in reality
 export const PERSON_NAMES = {
@@ -28,6 +29,7 @@ export const PERSON_NAMES = {
   [PERSON_YATISH_JAIN]: 'Yatish Jain',
   [PERSON_JOHN_GRIMES]: 'John Grimes',
   [PERSON_STEPHANIE_TONG]: 'Stephanie Tong',
+  [PERSON_OLIVER_HOFMANN]: 'Oliver Hofmann',
 };
 
 async function anyData(t: Table): Promise<boolean> {
@@ -171,10 +173,19 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       });
     }
 
+    await makeNagimTestDataset(table, ds10g.id);
+
     await makeReleasedDataset(table, '8XZF4195109CIIERC35P577HAM', PERSON_ANDREW_PATTO, ds10g.id, people, [
       'SINGLETONCHARLES',
       'SINGLETONMARY',
       'SINGLETONJANE',
+      'SINGLETONKAARINA',
+      'SINGLETONANNELI',
+      // 'SINGLETONMARIA', will be ruled out by their DUO code if this release was actually built in UI
+      'SINGLETONMELE',
+      'SINGLETONPELANI',
+      // 'SINGLETONDEMBO', will be ruled out by their DUO code if this release was actually built in UI
+      'SINGLETONPAKUTEH',
     ]);
     await makeReleasedDataset(table, '1AAC4S95109XIIERC35P577OOO', PERSON_YATISH_JAIN, ds10g.id, people, [
       'SINGLETONCHARLES',
@@ -297,7 +308,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
   }
 
   // bob is applying for access to the heart flagship
-  {
+  /*{
     const app2 = await ApplicationDbModel.create({
       id: '0WAP8I751047AH9A2T2883C66Z',
       applicantId: PERSON_BOB,
@@ -319,7 +330,7 @@ export async function setupTestData(canDestroyExistingData: boolean) {
       as: 'applicant',
       detail: 'was good',
     });
-  }
+  } */
 }
 
 async function makeReleasedDataset(t: Table, id: string, applicantId: string, datasetId: string, peopleDict: any, peopleAllowed: string[]) {
@@ -339,7 +350,7 @@ async function makeReleasedDataset(t: Table, id: string, applicantId: string, da
     htsgetEndpoint: 'https://htsget-apse2.dev.umccr.org',
     readsEnabled: false,
     variantsEnabled: true,
-    fhirEndpoint: 'https://fhir.dev.umccr.org',
+    fhirEndpoint: 'https://nagim.pathling.app',
     phenotypesEnabled: true,
     panelappId: 6,
     panelappVersion: '1.0',
@@ -367,4 +378,29 @@ async function makeReleasedDataset(t: Table, id: string, applicantId: string, da
       sampleIds: Array.from(peopleDict[p].sampleIds),
     });
   }
+}
+
+async function makeNagimTestDataset(t: Table, datasetId: string) {
+  const { ApplicationDbModel, ApplicationEventDbModel } = getTypes(t);
+
+  const app10g = await ApplicationDbModel.create({
+    id: '2JS9XEF5106YVTTFIXC5G869EC',
+    applicantId: PERSON_OLIVER_HOFMANN,
+    principalInvestigatorId: PERSON_OLIVER_HOFMANN,
+    datasetId: datasetId,
+    projectTitle: 'nagim_test',
+    researchUseStatement: 'I wish I knew',
+    snomed: new Set(['785299009' /*Cobblestone lissencephaly without muscular or ocular involvement*/]) as any,
+    hgnc: new Set(['HGNC:17997' /*FKRP*/]) as any,
+    state: 'submitted',
+  });
+
+  await ApplicationEventDbModel.create({
+    applicationId: app10g.id,
+    action: 'create',
+    when: new Date(2021, 4, 13, 15, 44, 21),
+    byId: PERSON_OLIVER_HOFMANN,
+    as: 'applicant',
+    detail: 'initial submission data',
+  });
 }

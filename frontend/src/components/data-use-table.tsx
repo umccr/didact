@@ -74,6 +74,10 @@ export const DataUseTable: React.FC<Props> = (props: Props) => {
     <table className="table border border-dashed border-gray-500 rounded-md p-4">
       <thead>
         <tr>
+          <td>
+            {props.showChecked && props.checked && <span>✅</span> }
+            {props.showChecked && props.checked === false && <span>❌</span> }
+          </td>
           <td width={32}>{dataUseIcon}</td>
           <td>{props.dataUse.code?.label}</td>
           <td>{props.dataUse.code?.id === "DUO:0000007" && <span>=</span>}</td>
@@ -87,16 +91,13 @@ export const DataUseTable: React.FC<Props> = (props: Props) => {
               </span>
             )}
           </td>
-          <td>
-            {props.showChecked && props.checked && <span>✅</span> }
-            {props.showChecked && props.checked === false && <span>❌</span> }
-          </td>
         </tr>
       </thead>
       <tbody>
         {props.dataUse.modifiers &&
           props.dataUse.modifiers.map((m, index) => (
             <tr key={index}>
+              <td></td>
               <td></td>
               <td>{m.code?.label}</td>
               <td>
@@ -113,7 +114,6 @@ export const DataUseTable: React.FC<Props> = (props: Props) => {
                   <span>{(m as DataUseModifierTimeLimit).start}</span>
                 )}
               </td>
-              <td></td>
             </tr>
           ))}
       </tbody>
